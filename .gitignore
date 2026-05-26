@@ -10,3 +10,7 @@ phases/**/step*-output.json
 
 # claude local settings
 .claude/settings.local.json
+
+# IDE
+.idea/
+.vscode/
