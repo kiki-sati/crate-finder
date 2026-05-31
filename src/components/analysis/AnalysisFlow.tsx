@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { WindowPanel } from "@/components/ui/WindowPanel";
 import { StepIndicator } from "@/components/analysis/StepIndicator";
 import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
+import { saveAnalysis } from "@/services/analysis-handoff";
 import type {
   YouTubePlaylistResponse,
   RekordboxParseResponse,
@@ -55,7 +56,12 @@ export function AnalysisFlow() {
     setError("");
     setMatching(true);
     try {
-      await runMatch(playlist, library);
+      const results = await runMatch(playlist, library);
+      saveAnalysis({
+        results,
+        youtubeTracks: playlist.tracks,
+        rekordboxTracks: library.tracks,
+      });
       router.push("/results");
     } catch (e) {
       setError(e instanceof Error ? e.message : "분석에 실패했습니다.");
