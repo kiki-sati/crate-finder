@@ -11,4 +11,10 @@ describe("normalizeString", () => {
     // 전각 영문 → 반각
     expect(normalizeString("Ｒｅｍｉｘ")).toBe("remix");
   });
+
+  it("다양한 특수 대시를 하이픈으로 통일한다", () => {
+    // en dash, em dash, horizontal bar
+    expect(normalizeString("artist – title")).toBe("artist - title");
+    expect(normalizeString("a — b ― c")).toBe("a - b - c");
+  });
 });
