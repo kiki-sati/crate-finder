@@ -17,4 +17,9 @@ describe("normalizeString", () => {
     expect(normalizeString("artist – title")).toBe("artist - title");
     expect(normalizeString("a — b ― c")).toBe("a - b - c");
   });
+
+  it("대괄호/중괄호를 소괄호로 통일하고 내용은 보존한다", () => {
+    expect(normalizeString("track [extended mix]")).toBe("track (extended mix)");
+    expect(normalizeString("track {original}")).toBe("track (original)");
+  });
 });
