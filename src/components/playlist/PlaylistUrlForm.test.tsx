@@ -14,4 +14,13 @@ describe("PlaylistUrlForm", () => {
     await userEvent.click(screen.getByRole("button", { name: /load/i }));
     expect(onSubmit).toHaveBeenCalledWith("https://youtube.com/playlist?list=PLx");
   });
+
+  it("defaultUrl을 입력 초기값으로 채운다", () => {
+    render(
+      <PlaylistUrlForm onSubmit={() => {}} defaultUrl="https://yt/playlist?list=PL9" />,
+    );
+    expect(screen.getByPlaceholderText(/playlist/i)).toHaveValue(
+      "https://yt/playlist?list=PL9",
+    );
+  });
 });
