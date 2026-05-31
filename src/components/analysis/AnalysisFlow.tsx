@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PlaylistUrlForm } from "@/components/playlist/PlaylistUrlForm";
 import { FileUploadBox } from "@/components/rekordbox/FileUploadBox";
@@ -9,6 +9,8 @@ import { WindowPanel } from "@/components/ui/WindowPanel";
 import { StepIndicator } from "@/components/analysis/StepIndicator";
 import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
 import { saveAnalysis } from "@/services/analysis-handoff";
+import { addSession } from "@/services/analysis-history";
+import { takeRerunUrl } from "@/services/rerun-handoff";
 import type {
   YouTubePlaylistResponse,
   RekordboxParseResponse,
@@ -18,17 +20,26 @@ export function AnalysisFlow() {
   const router = useRouter();
   const [playlist, setPlaylist] = useState<YouTubePlaylistResponse | null>(null);
   const [library, setLibrary] = useState<RekordboxParseResponse | null>(null);
+  const [playlistUrl, setPlaylistUrl] = useState("");
+  const [initialUrl, setInitialUrl] = useState("");
   const [fileName, setFileName] = useState("");
   const [loadingPlaylist, setLoadingPlaylist] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [matching, setMatching] = useState(false);
   const [error, setError] = useState("");
 
+  // "다시 분석"으로 넘어온 URL을 mount 후 1회 프리필(SSR hydration 회피).
+  useEffect(() => {
+    const url = takeRerunUrl();
+    if (url) setInitialUrl(url);
+  }, []);
+
   async function handlePlaylistSubmit(url: string) {
     setError("");
     setLoadingPlaylist(true);
     try {
       setPlaylist(await loadPlaylist(url));
+      setPlaylistUrl(url);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "플레이리스트를 불러오지 못했습니다.",
@@ -62,6 +73,15 @@ export function AnalysisFlow() {
         youtubeTracks: playlist.tracks,
         rekordboxTracks: library.tracks,
       });
+      // 요약 지표만 내역에 저장(원본 XML/트랙 미저장, ADR-004).
+      addSession({
+        playlistUrl,
+        playlistId: playlist.playlistId,
+        totalTrackCount: results.length,
+        ownedCount: results.filter((r) => r.status === "owned").length,
+        missingCount: results.filter((r) => r.status === "missing").length,
+        reviewCount: results.filter((r) => r.status === "needs_review").length,
+      });
       router.push("/results");
     } catch (e) {
       setError(e instanceof Error ? e.message : "분석에 실패했습니다.");
@@ -80,7 +100,11 @@ export function AnalysisFlow() {
         <div className="mt-4 flex flex-col gap-6">
           <section>
             <h2 className="mb-2 text-sm font-semibold">1. 플레이리스트 불러오기</h2>
-            <PlaylistUrlForm onSubmit={handlePlaylistSubmit} />
+            <PlaylistUrlForm
+              key={initialUrl}
+              defaultUrl={initialUrl}
+              onSubmit={handlePlaylistSubmit}
+            />
             {loadingPlaylist && <p className="mt-2 text-xs">불러오는 중…</p>}
             {playlist && (
               <p className="mt-2 text-xs text-[color:var(--color-text-muted)]">
