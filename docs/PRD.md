@@ -379,6 +379,8 @@ DJ 준은 매주 유튜브에서 새로운 트랙을 탐색하여 플레이리�
 
 ## 8. 데이터 모델 초안
 
+> 이 섹션이 도메인 데이터 모델의 **정본(single source of truth)** 이다. ARCHITECTURE §8은 코드 타입 관점의 참조본이다.
+
 ### 8.1 YouTubePlaylist
 
 ```ts
