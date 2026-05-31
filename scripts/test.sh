@@ -9,7 +9,7 @@ if [ ! -f package.json ]; then
   exit 0
 fi
 
-if ! npm run | grep -qE '^\s*test'; then
+if [ "$(npm pkg get scripts.test)" = "{}" ]; then
   echo "skip(test): package.json에 test 스크립트 없음"
   exit 0
 fi

@@ -9,7 +9,7 @@ if [ ! -f package.json ]; then
   exit 0
 fi
 
-if ! npm run | grep -qE '^\s*build'; then
+if [ "$(npm pkg get scripts.build)" = "{}" ]; then
   echo "skip(build): package.json에 build 스크립트 없음"
   exit 0
 fi
