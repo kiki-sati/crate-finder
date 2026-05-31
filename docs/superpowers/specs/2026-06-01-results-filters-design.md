@@ -15,7 +15,7 @@
 
 ## 2. 범위
 
-- `src/app/results/page.tsx`만 수정. 새 의존성·새 파일 없음. 기존 `ResultFilters` 재사용.
+- 주로 `src/app/results/page.tsx` 수정. 기존 `ResultFilters` 재사용(+ 선택 상태 `aria-pressed` a11y 보강).
 - 필터 상태(`useState<ResultFilter>("all")`) + 상태별 카운트 요약 추가.
 - 필터 적용된 행만 `MatchResultTable`에 전달. `all`이면 전체.
 - 빈 필터 결과는 테이블의 기존 "No results"로 처리.
