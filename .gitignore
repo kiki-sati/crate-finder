@@ -1,8 +1,23 @@
 node_modules/
 .next/
 out/
+build/
+coverage/
 next-env.d.ts
 tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# env files (commit only .env.example)
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*
 
 # phase execution outputs
 phases/**/phase*-output.json
