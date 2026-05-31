@@ -165,7 +165,7 @@ export function buildQuery(input: PriceSearchInput): string;
 - `lib/pricing/mock-price-provider.test.ts`: 결정적 quote 반환, 정확히 1개 `isLowest:true`, isLowest가 최저 price.
 - `lib/pricing/price-provider.test.ts`: `buildQuery` — artist 있을 때 "artist title", 없을 때 "title", 정규화(trim/소문자).
 - `services/price-provider.service.test.ts`: env=mock→mock provider, 미설정/search_link→search-link, external→search-link fallback, 응답 shape.
-- `app/api/price/search/route.test.ts`: title 누락 시 400 + ok:false, 정상 시 ok:true + offers.
+- `/api/price/search` route: thin adapter라 단위 테스트 없음(기존 youtube/rekordbox route precedent). 검증·provider 선택 로직은 `price-provider.service.test.ts`가 커버.
 - `services/price.service.test.ts`: fetch 스파이, ok:true 언랩, ok:false throw, 비-봉투 HTTP throw (analysis.service 패턴).
 - `components/price/PriceComparePanel.test.tsx`: 로딩→오퍼 렌더, 새 탭 속성, 에러+재시도, 빈 결과 안내.
 - `components/results/MatchResultTable.test.tsx`: missing 행에 구매 버튼, owned 행엔 없음, 클릭 시 패널 펼침.
