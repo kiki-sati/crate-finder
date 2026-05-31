@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* tokens.css(:root)의 디자인 토큰을 Tailwind 유틸리티로 노출.
+   우변은 tokens.css가 정의한 실제 변수를 가리킨다(자기참조 아님). */
+@theme {
+  --color-app: var(--color-app-bg);
+  --color-window: var(--color-window-bg);
+  --color-panel: var(--color-panel-bg);
+
+  --color-owned: var(--color-owned);
+  --color-owned-bg: var(--color-owned-bg);
+  --color-missing: var(--color-missing);
+  --color-missing-bg: var(--color-missing-bg);
+  --color-review: var(--color-review);
+  --color-review-bg: var(--color-review-bg);
+
+  --color-accent: var(--color-accent-primary);
+  --color-border-strong: var(--color-border-primary);
+
+  /* scaffold가 주입하는 Geist 폰트 변수 보존 */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-app-bg);
+  color: var(--color-text-primary);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}

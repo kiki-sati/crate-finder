@@ -1,0 +1,30 @@
+/* Crate Finder 디자인 토큰 — 정본: docs/UI_GUIDE.md (Color System)
+   Classic Macintosh-inspired DJ Workstation 팔레트 */
+:root {
+  --color-app-bg: #E8E3D3;
+  --color-window-bg: #F8F6EE;
+  --color-panel-bg: #FFFFFF;
+
+  --color-border-primary: #111111;
+  --color-border-muted: #8A867A;
+  --color-border-soft: #C8C1B2;
+
+  --color-text-primary: #111111;
+  --color-text-secondary: #4F4A42;
+  --color-text-muted: #777166;
+
+  --color-accent-primary: #5A4FCF;
+  --color-accent-primary-dark: #3F36A3;
+  --color-accent-secondary: #2F2F2F;
+
+  --color-owned: #1F7A3A;
+  --color-owned-bg: #E4F4E8;
+  --color-missing: #B83232;
+  --color-missing-bg: #F8E4E4;
+  --color-review: #B7791F;
+  --color-review-bg: #FFF3D8;
+  --color-info: #2B6CB0;
+  --color-info-bg: #E4EFFA;
+  --color-danger: #A92828;
+  --color-danger-bg: #F8E2E2;
+}
