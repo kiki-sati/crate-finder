@@ -22,4 +22,8 @@ describe("normalizeString", () => {
     expect(normalizeString("track [extended mix]")).toBe("track (extended mix)");
     expect(normalizeString("track {original}")).toBe("track (original)");
   });
+
+  it("연속 공백/탭을 한 칸으로 정리한다", () => {
+    expect(normalizeString("a   b\t c")).toBe("a b c");
+  });
 });

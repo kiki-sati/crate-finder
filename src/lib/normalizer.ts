@@ -7,7 +7,7 @@ const DASH_PATTERN = /[‒–—―−]/g;
 /**
  * 비교용 정규화 파이프라인.
  * trim → lowercase → unicode normalize(NFKC) → 특수 dash 통일
- *   → 괄호 통일(보존: [ { → ( , ] } → ))
+ *   → 괄호 통일(보존: [ { → ( , ] } → )) → 공백 정리
  */
 export function normalizeString(raw: string): string {
   return raw
@@ -16,5 +16,7 @@ export function normalizeString(raw: string): string {
     .normalize("NFKC")
     .replace(DASH_PATTERN, "-")
     .replace(/[[{]/g, "(")
-    .replace(/[\]}]/g, ")");
+    .replace(/[\]}]/g, ")")
+    .replace(/\s+/g, " ")
+    .trim();
 }
