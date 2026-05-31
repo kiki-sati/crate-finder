@@ -30,6 +30,15 @@ YouTube Playlist URL 입력 → playlistId 추출 → 곡 목록 로드 → 제�
 MVP 최우선 3가지: ① Rekordbox XML 안정 파싱 ② 유튜브↔Rekordbox 정확 비교 ③ 빠르게 확인 가능한 결과 테이블.
 랜딩페이지·고급 애니메이션·과한 디자인은 후순위.
 
+## Stack & Commands (Phase 1 확정)
+
+Next.js 15.5 (App Router) · React 19 · TypeScript strict · Tailwind v4(CSS-first `@theme`, config 파일 없음) · Vitest 4 · npm.
+- 검증: `bash scripts/verify.sh` (lint→build→test). 개별: `npm run lint|build|test`.
+- 스타일: `src/styles/{globals,tokens}.css`. 디자인 토큰은 tokens.css(:root) → globals.css `@theme`로 노출.
+- 개발 서버: 포트 **반드시 고정** (`PORT=3100 npm run dev`). 미지정 시 3000 점유되면 3001로 이동→404 오진.
+- TDD: 순수 로직은 테스트 먼저. 타입 검증은 `src/tests/*.test-d.ts`(vitest typecheck).
+- `gh`/`brew`는 `/opt/homebrew/bin` (PATH 추가 필요할 수 있음).
+
 ## Domain Invariants (불변값 — 변경 시 사용자 확인)
 
 ```ts
@@ -58,6 +67,7 @@ type MatchConfidence = "high" | "medium" | "low";
 **Git** (상세: ADR-014/015, `docs/WORKFLOW.md`)
 - `main`에 직접 commit/push 금지. 작업은 `feature|fix|docs|refactor|test|chore/{slug}` 브랜치에서.
 - Conventional Commits(`type(scope): summary`). 사용자 승인 전 merge 금지.
+- 커밋 전 `git rev-parse --abbrev-ref HEAD`로 브랜치 확인(세션 혼선 방지).
 
 ## Do Not
 
