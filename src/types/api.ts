@@ -3,6 +3,7 @@
 // 변경 시 FE/BE 양 트랙에 영향 → main sync 커밋으로만 수정(임의 변경 금지).
 
 import type { YouTubeTrack, RekordboxTrack } from "@/types/track";
+import type { PriceQuote, PriceProviderMode } from "@/types/pricing";
 
 // 공통 래퍼: 각 라우트는 data 페이로드를 ApiResult로 감싸 반환한다.
 export type ApiOk<T> = { ok: true; data: T };
@@ -34,4 +35,17 @@ export type RekordboxParseResponse = {
   trackCount: number;
   tracks: RekordboxTrack[];
   warnings: RekordboxParseWarning[];
+};
+
+// --- 7.4 POST /api/price/search ---
+// 누락곡 구매 검색 링크/가격 후보 조회. Provider 패턴(ADR-009/017).
+export type PriceSearchRequest = {
+  title: string;
+  artist?: string;
+};
+
+export type PriceSearchResponse = {
+  query: string; // 검색에 사용한 정규화 질의
+  offers: PriceQuote[];
+  provider: PriceProviderMode; // 실제 사용된 provider
 };
