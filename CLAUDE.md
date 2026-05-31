@@ -68,6 +68,7 @@ type MatchConfidence = "high" | "medium" | "low";
 - `main`에 직접 commit/push 금지. 작업은 `feature|fix|docs|refactor|test|chore/{slug}` 브랜치에서.
 - Conventional Commits(`type(scope): summary`). 사용자 승인 전 merge 금지.
 - 커밋 전 `git rev-parse --abbrev-ref HEAD`로 브랜치 확인(세션 혼선 방지).
+- 병렬 트랙(BE/FE 등 독립 작업)은 **트랙별로 PR 분리**. 하나의 통합 브랜치로 묶어 단일 PR로 올리지 않는다. 공유 계약(`types`/`mocks`)은 먼저 별도 PR로 올리고, 각 트랙 PR을 그 위에 쌓는다(stacked).
 
 ## Do Not
 
@@ -77,6 +78,7 @@ type MatchConfidence = "high" | "medium" | "low";
 - 문서와 충돌하는 구조 변경 / 테스트 실패 무시하고 PR 생성
 - Apple 로고·실제 Macintosh 시스템 아이콘 사용 / 과한 네온·글래스모피즘·AI SaaS 스타일
 - 전체 기능을 한 번에 구현 / 관련 없는 리팩토링을 같은 PR에 포함
+- 병렬 BE/FE(독립 트랙)를 한 PR에 묶기 — 트랙별로 분리해 올린다
 
 ## When Unsure (임의 결정 금지 — 사용자 확인)
 
