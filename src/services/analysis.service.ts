@@ -3,24 +3,13 @@
 // 계층 규칙(CLAUDE.md): services → lib(matcher) 허용. components import 금지.
 
 import type {
-  ApiResult,
   YouTubePlaylistResponse,
   RekordboxParseResponse,
 } from "@/types/api";
 import type { MatchResult } from "@/types/match";
 import { parsePlaylistUrl } from "@/lib/youtube/parse-playlist-url";
 import { matchTracks } from "@/lib/matcher/match";
-
-// 라우트는 성공/실패 모두 ApiResult 봉투를 반환한다(ARCHITECTURE §7).
-// 봉투가 아니거나 파싱 불가한 응답(프레임워크/프록시 레벨 오류 등)은 HTTP 상태로 실패 처리한다.
-async function readResult<T>(res: Response): Promise<T> {
-  const body = (await res.json().catch(() => null)) as ApiResult<T> | null;
-  if (body && body.ok === false) throw new Error(body.error.message);
-  if (!body || body.ok !== true) {
-    throw new Error(`요청 처리에 실패했습니다 (HTTP ${res.status}).`);
-  }
-  return body.data;
-}
+import { readApiResult } from "@/services/http";
 
 export async function loadPlaylist(
   url: string,
@@ -31,7 +20,7 @@ export async function loadPlaylist(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url }),
   });
-  return readResult<YouTubePlaylistResponse>(res);
+  return readApiResult<YouTubePlaylistResponse>(res);
 }
 
 export async function parseXml(file: File): Promise<RekordboxParseResponse> {
@@ -44,7 +33,7 @@ export async function parseXml(file: File): Promise<RekordboxParseResponse> {
     method: "POST",
     body: form,
   });
-  return readResult<RekordboxParseResponse>(res);
+  return readApiResult<RekordboxParseResponse>(res);
 }
 
 // 현재는 순수 동기 matcher를 직접 실행. 추후 서버 위임 시 시그니처 변경 없이 교체 가능.
