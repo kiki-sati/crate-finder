@@ -67,6 +67,7 @@ type MatchConfidence = "high" | "medium" | "low";
 **Git** (상세: ADR-014/015, `docs/WORKFLOW.md`)
 - `main`에 직접 commit/push 금지. 작업은 `feature|fix|docs|refactor|test|chore/{slug}` 브랜치에서.
 - Conventional Commits(`type(scope): summary`). 사용자 승인 전 merge 금지.
+- 커밋 전 `git rev-parse --abbrev-ref HEAD`로 브랜치 확인(세션 혼선 방지).
 
 ## Do Not
 
