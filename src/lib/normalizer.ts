@@ -3,8 +3,8 @@
 
 /**
  * 비교용 정규화 파이프라인.
- * trim → lowercase
+ * trim → lowercase → unicode normalize(NFKC)
  */
 export function normalizeString(raw: string): string {
-  return raw.trim().toLowerCase();
+  return raw.trim().toLowerCase().normalize("NFKC");
 }
