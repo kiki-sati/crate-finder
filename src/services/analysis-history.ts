@@ -31,7 +31,8 @@ function newId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
-  return `s_${Date.now()}`;
+  // crypto.randomUUID 미지원 환경 폴백 — 같은 ms 충돌 방지용 무작위 접미사.
+  return `s_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export type NewSession = Omit<AnalysisSession, "id" | "createdAt">;
