@@ -84,6 +84,15 @@ idle
 - **mock 단계(이 PR)**: `Run` → `router.push("/results")`. `/results`는 기존 mock loader로 자체 렌더(현 구조 유지). 상태 전달 불필요.
 - **통합(다음 PR)**: mock service를 실제 fetch로 교체, 분석 결과를 store(또는 server state)에 저장 후 `/results`가 그 결과를 읽음.
 
+### 8.1 통합 단계 보안 가드레일 (필수 — ADR-003 / ARCHITECTURE §4.2·§5.1·§12.1)
+
+> mock인 `src/services/analysis.service.ts`는 client 컴포넌트(`AnalysisFlow`)가 **직접 호출**한다. mock 단계에선 외부 API·API Key·`fetch`·`process.env`가 전혀 없어 안전하지만, 통합 시 이 호출 경로를 그대로 두면 키가 클라이언트 번들에 노출된다. 통합 PR은 아래를 반드시 지킨다.
+
+- `loadPlaylist`/`parseXml`/`runMatch`의 구현을 **API Route 호출(`fetch('/api/youtube/playlist')` 등)로 교체**한다. 정본 흐름: `client component → API Route(/api/*) → service → 외부 API`(ARCHITECTURE §5.1).
+- **금지**: client에서 실행되는 `analysis.service`가 `youtube.service`(YouTube API Key 보유) 등 서버 service를 직접 import하는 것. → 키가 클라이언트로 번들링됨(ADR-003·CLAUDE.md 보안 위반).
+- `YOUTUBE_API_KEY`는 서버 영역(`src/app/api/*`, `src/services/*`의 서버 전용 경로)에서만 접근한다. `NEXT_PUBLIC_` 금지.
+- 교체 후 검증: client 번들에 키/외부 엔드포인트 비밀이 포함되지 않는지 확인(`process.env` 직접 참조가 client 경로에 없을 것).
+
 ## 9. 테스트 케이스 (TDD, 테스트 먼저)
 
 - `AnalysisFlow`:
