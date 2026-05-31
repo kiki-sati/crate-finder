@@ -370,41 +370,15 @@ type PurchaseClickEventRequest = {
 
 ## 8. 도메인 타입
 
+> **정본: 도메인 데이터 모델은 `docs/PRD.md` §8.** 아래는 코드 레이어용 TypeScript 타입이며, 필드 의미·관계의 단일 출처는 PRD §8이다.
+
 ```ts
 type TrackStatus = "owned" | "missing" | "needs_review";
 type MatchConfidence = "high" | "medium" | "low";
 
-type YouTubeTrack = {
-  id: string;
-  videoId: string;
-  rawTitle: string;
-  channelTitle?: string;
-  publishedAt?: string;
-  parsedArtist?: string;
-  parsedTitle?: string;
-  parseStatus: "parsed" | "needs_review" | "unavailable";
-};
-
-type RekordboxTrack = {
-  id: string;
-  title: string;
-  artist?: string;
-  album?: string;
-  durationMs?: number;
-  location?: string;
-  normalizedTitle: string;
-  normalizedArtist?: string;
-};
-
-type MatchResult = {
-  id: string;
-  youtubeTrackId: string;
-  matchedRekordboxTrackId?: string;
-  status: TrackStatus;
-  confidence: MatchConfidence;
-  score: number;
-  candidates: MatchCandidate[];
-};
+// 엔티티 형태(YouTubeTrack, RekordboxTrack, MatchResult, MatchCandidate,
+// AnalysisSession, YouTubePlaylist)는 docs/PRD.md §8 참조(정본).
+// 여기서는 코드 전반에서 공유하는 상태/신뢰도 enum만 정의한다.
 ```
 
 ---
@@ -687,6 +661,8 @@ MAX_XML_FILE_SIZE_MB=20
 ---
 
 ## 19. 구현 순서
+
+> **구현 순서(Phase)의 단일 출처는 이 섹션이다.** CLAUDE.md·WORKFLOW.md는 여기를 참조만 한다.
 
 ### Phase 0: Foundation
 
