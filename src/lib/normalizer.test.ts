@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { normalizeString } from "@/lib/normalizer";
+import { normalizeString, normalizeTitle } from "@/lib/normalizer";
 
 describe("normalizeString", () => {
   it("앞뒤 공백을 제거하고 소문자로 변환한다", () => {
@@ -25,5 +25,23 @@ describe("normalizeString", () => {
 
   it("연속 공백/탭을 한 칸으로 정리한다", () => {
     expect(normalizeString("a   b\t c")).toBe("a b c");
+  });
+});
+
+describe("normalizeTitle", () => {
+  it("feat./ft./featuring 절을 비교 대상에서 제거한다", () => {
+    expect(normalizeTitle("Song (feat. Artist B)")).toBe("song");
+    expect(normalizeTitle("Song ft Artist B")).toBe("song");
+    expect(normalizeTitle("Song featuring Artist B")).toBe("song");
+  });
+
+  it("Remix/Extended 등 버전 괄호는 보존한다", () => {
+    expect(normalizeTitle("Song (Extended Mix)")).toBe("song (extended mix)");
+  });
+
+  it("feat 절을 제거하되 뒤따르는 버전 괄호는 보존한다", () => {
+    expect(normalizeTitle("Song feat. A & B (Extended Mix)")).toBe(
+      "song (extended mix)",
+    );
   });
 });

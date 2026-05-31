@@ -20,3 +20,16 @@ export function normalizeString(raw: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+// feat./ft./featuring 참여 아티스트 절. 괄호 유무 모두 처리하되,
+// 버전 괄호(Extended Mix 등)는 건드리지 않도록 다음 "(" 또는 끝까지만 매칭.
+const FEAT_PATTERN = /\(?\b(?:feat|ft|featuring)\b\.?\s[^)(]*\)?/g;
+
+/**
+ * 곡명 비교용 정규화.
+ * normalizeString 파이프라인 + 참여 아티스트(feat) 절 제거.
+ * 결정(2026-05-31): feat 절은 비교 key에서 제거(원본은 표시용 유지).
+ */
+export function normalizeTitle(raw: string): string {
+  return normalizeString(normalizeString(raw).replace(FEAT_PATTERN, " "));
+}
