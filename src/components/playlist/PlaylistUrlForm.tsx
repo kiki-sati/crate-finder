@@ -3,8 +3,14 @@ import { useState } from "react";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
-export function PlaylistUrlForm({ onSubmit }: { onSubmit: (url: string) => void }) {
-  const [url, setUrl] = useState("");
+export function PlaylistUrlForm({
+  onSubmit,
+  defaultUrl = "",
+}: {
+  onSubmit: (url: string) => void;
+  defaultUrl?: string;
+}) {
+  const [url, setUrl] = useState(defaultUrl);
   return (
     <form
       className="flex gap-2"

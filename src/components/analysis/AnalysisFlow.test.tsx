@@ -10,15 +10,21 @@ vi.mock("@/services/analysis.service", () => ({
   runMatch: vi.fn(),
 }));
 vi.mock("@/services/analysis-handoff", () => ({ saveAnalysis: vi.fn() }));
+vi.mock("@/services/analysis-history", () => ({ addSession: vi.fn() }));
+vi.mock("@/services/rerun-handoff", () => ({ takeRerunUrl: vi.fn(() => null) }));
 
 import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
 import { saveAnalysis } from "@/services/analysis-handoff";
+import { addSession } from "@/services/analysis-history";
+import { takeRerunUrl } from "@/services/rerun-handoff";
 import { AnalysisFlow } from "@/components/analysis/AnalysisFlow";
 
 const mockedLoad = vi.mocked(loadPlaylist);
 const mockedParse = vi.mocked(parseXml);
 const mockedRun = vi.mocked(runMatch);
 const mockedSave = vi.mocked(saveAnalysis);
+const mockedAddSession = vi.mocked(addSession);
+const mockedTakeRerun = vi.mocked(takeRerunUrl);
 
 function playlistRes(trackCount: number) {
   return {
@@ -37,6 +43,7 @@ function parseRes(trackCount: number) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockedTakeRerun.mockReturnValue(null); // 기본: rerun 없음
 });
 
 describe("AnalysisFlow", () => {
@@ -164,5 +171,52 @@ describe("AnalysisFlow", () => {
     const saveOrder = mockedSave.mock.invocationCallOrder[0];
     const pushOrder = push.mock.invocationCallOrder[0];
     expect(saveOrder).toBeLessThan(pushOrder);
+  });
+
+  it("Run 성공 시 요약 세션을 내역에 저장한다", async () => {
+    mockedLoad.mockResolvedValue(playlistRes(2));
+    mockedParse.mockResolvedValue(parseRes(5));
+    mockedRun.mockResolvedValue([
+      { id: "mr_1", youtubeTrackId: "yt_1", status: "owned", confidence: "high", score: 1, candidates: [] },
+      { id: "mr_2", youtubeTrackId: "yt_2", status: "missing", confidence: "low", score: 0, candidates: [] },
+    ] as unknown as Awaited<ReturnType<typeof runMatch>>);
+
+    const { container } = render(<AnalysisFlow />);
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByPlaceholderText("YouTube playlist URL"),
+      "https://www.youtube.com/playlist?list=PL1",
+    );
+    await user.click(screen.getByRole("button", { name: "Load" }));
+    await screen.findByText("2곡 로드됨");
+
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["<xml/>"], "library.xml", { type: "text/xml" }),
+    );
+    await screen.findByText(/library\.xml/);
+
+    await user.click(screen.getByRole("button", { name: "Run Match" }));
+    await waitFor(() => expect(mockedAddSession).toHaveBeenCalledTimes(1));
+
+    const session = mockedAddSession.mock.calls[0][0];
+    expect(session.playlistUrl).toBe("https://www.youtube.com/playlist?list=PL1");
+    expect(session.playlistId).toBe("PL1");
+    expect(session.totalTrackCount).toBe(2);
+    expect(session.ownedCount).toBe(1);
+    expect(session.missingCount).toBe(1);
+    expect(session.reviewCount).toBe(0);
+  });
+
+  it("rerun URL이 있으면 입력창에 프리필한다", async () => {
+    mockedTakeRerun.mockReturnValue("https://yt/playlist?list=PLrerun");
+    render(<AnalysisFlow />);
+    expect(
+      await screen.findByDisplayValue("https://yt/playlist?list=PLrerun"),
+    ).toBeInTheDocument();
   });
 });
