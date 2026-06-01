@@ -22,6 +22,7 @@ export function ResultFilters({
         <Button
           key={f.key}
           variant={value === f.key ? "primary" : "secondary"}
+          aria-pressed={value === f.key}
           onClick={() => onChange(f.key)}
         >
           {f.label}

@@ -10,4 +10,16 @@ describe("ResultFilters", () => {
     await userEvent.click(screen.getByRole("button", { name: /missing/i }));
     expect(onChange).toHaveBeenCalledWith("missing");
   });
+
+  it("현재 선택된 필터를 aria-pressed로 표시한다", () => {
+    render(<ResultFilters value="missing" onChange={() => {}} />);
+    expect(screen.getByRole("button", { name: /^missing$/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /^all$/i })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
 });
