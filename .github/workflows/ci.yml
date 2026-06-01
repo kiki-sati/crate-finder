@@ -1,0 +1,28 @@
+name: CI
+
+# Phase 6 "CI 검증" (ADR-014, ARCHITECTURE §18).
+# PR과 통합 브랜치 push에서 lint → build → test(scripts/verify.sh)를 자동 검증한다.
+# 외부 시크릿/배포 없음. 실패해도 코드에 영향 없고 워크플로 파일 삭제로 즉시 되돌릴 수 있다.
+
+on:
+  pull_request:
+  push:
+    branches: [main, chore/contract-foundation]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify (lint → build → test)
+        run: bash scripts/verify.sh
