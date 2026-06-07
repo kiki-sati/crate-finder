@@ -49,6 +49,52 @@ describe("normalizeTitle", () => {
       "song (extended mix)",
     );
   });
+
+  describe("선행 트랙번호 제거 (Rekordbox 곡명)", () => {
+    it("'숫자. ' 선행 트랙번호를 제거한다", () => {
+      expect(normalizeTitle("3. KISSES")).toBe("kisses");
+      expect(normalizeTitle("04. Track Name")).toBe("track name");
+    });
+
+    it("'숫자) ' 선행 트랙번호를 제거한다", () => {
+      expect(normalizeTitle("3) Title")).toBe("title");
+    });
+
+    it("실데이터: 선행 트랙번호 제거와 기존 동작이 공존한다", () => {
+      // 트랙번호 제거 + feat(=prod) 류 괄호 보존 동작 확인
+      expect(normalizeTitle("3. KISSES (prod. by B.Bravo)")).toBe(
+        "kisses (prod. by b.bravo)",
+      );
+    });
+
+    it("선행 트랙번호 제거 후 feat 절도 함께 제거한다", () => {
+      expect(normalizeTitle("12. Song (feat. Artist B)")).toBe("song");
+    });
+
+    // 제거하면 안 되는 케이스
+    it("숫자 뒤 구분자 없이 단어면 제거하지 않는다", () => {
+      expect(normalizeTitle("3 is the magic number")).toBe(
+        "3 is the magic number",
+      );
+    });
+
+    it("맨 앞이 아닌 숫자는 제거하지 않는다", () => {
+      expect(normalizeTitle("track 3")).toBe("track 3");
+    });
+
+    it("구분자/공백 없는 숫자만(404)은 제거하지 않는다", () => {
+      expect(normalizeTitle("404")).toBe("404");
+    });
+
+    it("3자리 초과 선행 숫자는 트랙번호로 보지 않는다", () => {
+      expect(normalizeTitle("1234. Song")).toBe("1234. song");
+    });
+
+    it("제거하면 빈/숫자만 남는 경우는 원본을 유지한다(정보 손실 방지)", () => {
+      expect(normalizeTitle("3.")).toBe("3.");
+      expect(normalizeTitle("04) ")).toBe("04)");
+    });
+  });
 });
 
 describe("normalizeArtist", () => {

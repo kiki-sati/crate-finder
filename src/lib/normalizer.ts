@@ -21,6 +21,21 @@ export function normalizeString(raw: string): string {
     .trim();
 }
 
+// 곡명 맨 앞 트랙번호(예: "3. ", "04. ", "3) "). Rekordbox 곡명엔 흔하나
+// YouTube 제목엔 없어 유사도를 떨어뜨린다 → 비교용으로만 제거(승인 2026-06-07).
+// 보수적: 1~3자리 숫자 + 구분자([.)]) + 공백. "404"(구분자 없음),
+// "3 is..."(공백뿐), "track 3"(맨 앞 아님), "1234. "(4자리)는 매칭 안 됨.
+const LEADING_TRACK_NUMBER_PATTERN = /^\d{1,3}[.)]\s+/;
+
+// 선행 트랙번호를 제거하되, 제거 후 빈 문자열/숫자만 남으면 정보 손실로 보고
+// 원본을 유지한다(예: "3." 는 normalizeString 후 공백이 없어 애초에 매칭 안 됨).
+function stripLeadingTrackNumber(normalized: string): string {
+  if (!LEADING_TRACK_NUMBER_PATTERN.test(normalized)) return normalized;
+  const stripped = normalized.replace(LEADING_TRACK_NUMBER_PATTERN, "").trim();
+  if (stripped === "" || /^\d+$/.test(stripped)) return normalized;
+  return stripped;
+}
+
 // feat./ft./featuring 참여 아티스트 절. 괄호 유무 모두 처리하되,
 // 버전 괄호(Extended Mix 등)는 건드리지 않도록 다음 "(" 또는 끝까지만 매칭.
 const FEAT_PATTERN = /\(?\b(?:feat|ft|featuring)\b\.?\s[^)(]*\)?/g;
@@ -32,11 +47,13 @@ function stripFeat(normalized: string): string {
 
 /**
  * 곡명 비교용 정규화.
- * normalizeString 파이프라인 + 참여 아티스트(feat) 절 제거.
+ * normalizeString → 선행 트랙번호 제거 → 참여 아티스트(feat) 절 제거.
  * 결정(2026-05-31): feat 절은 비교 key에서 제거(원본은 표시용 유지).
+ * 결정(2026-06-07): Rekordbox 곡명 선행 트랙번호 제거(매칭 정확도).
+ * 트랙번호 제거는 곡명에만 적용한다(아티스트엔 무의미).
  */
 export function normalizeTitle(raw: string): string {
-  return stripFeat(normalizeString(raw));
+  return stripFeat(stripLeadingTrackNumber(normalizeString(raw)));
 }
 
 /**
