@@ -20,4 +20,17 @@ describe("buildQuery", () => {
       "one more time",
     );
   });
+
+  // 입력 강건성(Phase 6): 검색 질의 길이를 제한해 링크 위생을 유지한다.
+  it("질의가 최대 길이를 넘으면 잘라낸다", () => {
+    const longTitle = "a".repeat(500);
+    const result = buildQuery({ title: longTitle });
+    expect(result.length).toBeLessThanOrEqual(200);
+  });
+
+  it("길이 제한으로 잘라도 끝에 공백이 남지 않는다", () => {
+    const title = "word ".repeat(100); // 단어+공백 반복
+    const result = buildQuery({ title });
+    expect(result).toBe(result.trimEnd());
+  });
 });
