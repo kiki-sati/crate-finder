@@ -4,10 +4,24 @@ import type { MatchRow } from "@/components/results/match-row";
 import { StatusBadge } from "@/components/results/StatusBadge";
 import { ConfidenceBadge } from "@/components/results/ConfidenceBadge";
 import { PriceComparePanel } from "@/components/price/PriceComparePanel";
+import { CandidateReviewPanel } from "@/components/results/CandidateReviewPanel";
 
 const HEADERS = ["#", "Track", "Artist", "Status", "Confidence", "Matched", "Action"];
 
-export function MatchResultTable({ rows }: { rows: MatchRow[] }) {
+// onConfirm/onReject는 옵셔널 — needs_review 후보 확정/거부를 상위로 올린다.
+// 컴포넌트는 resolveMatch 등 매칭 로직을 직접 호출하지 않는다(콜백만 위임).
+type MatchResultTableProps = {
+  rows: MatchRow[];
+  onConfirm?: (resultId: string, rekordboxTrackId: string) => void;
+  onReject?: (resultId: string) => void;
+};
+
+export function MatchResultTable({
+  rows,
+  onConfirm,
+  onReject,
+}: MatchResultTableProps) {
+  // missing(가격) / needs_review(후보) 공용: 한 번에 하나의 행만 펼친다.
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (rows.length === 0) {
@@ -32,7 +46,10 @@ export function MatchResultTable({ rows }: { rows: MatchRow[] }) {
           const yt = row.youtubeTrack;
           const title = yt.parsedTitle ?? yt.rawTitle;
           const isMissing = row.result.status === "missing";
+          const isNeedsReview = row.result.status === "needs_review";
           const expanded = expandedId === row.result.id;
+          const toggle = () =>
+            setExpandedId(expanded ? null : row.result.id);
           return (
             <Fragment key={row.result.id}>
               <tr className="border-b border-[color:var(--color-border-soft)]">
@@ -58,12 +75,19 @@ export function MatchResultTable({ rows }: { rows: MatchRow[] }) {
                   {isMissing && (
                     <button
                       type="button"
-                      onClick={() =>
-                        setExpandedId(expanded ? null : row.result.id)
-                      }
+                      onClick={toggle}
                       className="text-xs underline"
                     >
                       {expanded ? "닫기" : "구매"}
+                    </button>
+                  )}
+                  {isNeedsReview && (
+                    <button
+                      type="button"
+                      onClick={toggle}
+                      className="text-xs underline"
+                    >
+                      {expanded ? "닫기" : "확인"}
                     </button>
                   )}
                 </td>
@@ -75,6 +99,21 @@ export function MatchResultTable({ rows }: { rows: MatchRow[] }) {
                     className="bg-[color:var(--color-app-bg)] p-0"
                   >
                     <PriceComparePanel title={title} artist={yt.parsedArtist} />
+                  </td>
+                </tr>
+              )}
+              {isNeedsReview && expanded && (
+                <tr>
+                  <td
+                    colSpan={HEADERS.length}
+                    className="bg-[color:var(--color-app-bg)] p-0"
+                  >
+                    <CandidateReviewPanel
+                      candidates={row.result.candidates}
+                      tracksById={row.candidateTracks ?? {}}
+                      onConfirm={(rbId) => onConfirm?.(row.result.id, rbId)}
+                      onReject={() => onReject?.(row.result.id)}
+                    />
                   </td>
                 </tr>
               )}
