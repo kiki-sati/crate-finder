@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { AppShell } from "@/components/layout/AppShell";
 import { WindowPanel } from "@/components/ui/WindowPanel";
 import { StepIndicator } from "@/components/analysis/StepIndicator";
+import { ErrorNotice } from "@/components/analysis/ErrorNotice";
 import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
 import { saveAnalysis } from "@/services/analysis-handoff";
 import { addSession } from "@/services/analysis-history";
@@ -26,7 +27,12 @@ export function AnalysisFlow() {
   const [loadingPlaylist, setLoadingPlaylist] = useState(false);
   const [parsing, setParsing] = useState(false);
   const [matching, setMatching] = useState(false);
-  const [error, setError] = useState("");
+  // 오류는 code(가이드 매핑용)·message(폴백)·retry(해당 단계 재시도)를 함께 보관.
+  const [error, setError] = useState<{
+    code?: string;
+    message: string;
+    retry?: () => void;
+  } | null>(null);
 
   // "다시 분석"으로 넘어온 URL을 mount 후 1회 프리필(SSR hydration 회피).
   useEffect(() => {
@@ -35,28 +41,35 @@ export function AnalysisFlow() {
   }, []);
 
   async function handlePlaylistSubmit(url: string) {
-    setError("");
+    setError(null);
     setLoadingPlaylist(true);
     try {
       setPlaylist(await loadPlaylist(url));
       setPlaylistUrl(url);
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "플레이리스트를 불러오지 못했습니다.",
-      );
+      setError({
+        code: (e as { code?: string }).code,
+        message:
+          e instanceof Error ? e.message : "플레이리스트를 불러오지 못했습니다.",
+        retry: () => handlePlaylistSubmit(url),
+      });
     } finally {
       setLoadingPlaylist(false);
     }
   }
 
   async function handleFile(file: File) {
-    setError("");
+    setError(null);
     setParsing(true);
     try {
       setLibrary(await parseXml(file));
       setFileName(file.name);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "XML을 파싱하지 못했습니다.");
+      setError({
+        code: (e as { code?: string }).code,
+        message: e instanceof Error ? e.message : "XML을 파싱하지 못했습니다.",
+        retry: () => handleFile(file),
+      });
     } finally {
       setParsing(false);
     }
@@ -64,7 +77,7 @@ export function AnalysisFlow() {
 
   async function handleRun() {
     if (!playlist || !library) return;
-    setError("");
+    setError(null);
     setMatching(true);
     try {
       const results = await runMatch(playlist, library);
@@ -84,7 +97,11 @@ export function AnalysisFlow() {
       });
       router.push("/results");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "분석에 실패했습니다.");
+      setError({
+        code: (e as { code?: string }).code,
+        message: e instanceof Error ? e.message : "분석에 실패했습니다.",
+        retry: () => handleRun(),
+      });
       setMatching(false);
     }
   }
@@ -132,9 +149,11 @@ export function AnalysisFlow() {
           </section>
 
           {error && (
-            <p role="alert" className="text-sm text-[color:var(--color-danger)]">
-              {error}
-            </p>
+            <ErrorNotice
+              code={error.code}
+              message={error.message}
+              onRetry={error.retry}
+            />
           )}
         </div>
       </WindowPanel>

@@ -219,4 +219,45 @@ describe("AnalysisFlow", () => {
       await screen.findByDisplayValue("https://yt/playlist?list=PLrerun"),
     ).toBeInTheDocument();
   });
+
+  it("플레이리스트 로드 실패 시 code 기반 ErrorNotice 가이드를 표시한다", async () => {
+    const err = Object.assign(new Error("플레이리스트를 찾을 수 없습니다."), {
+      code: "playlist_not_found",
+    });
+    mockedLoad.mockRejectedValue(err);
+    render(<AnalysisFlow />);
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByPlaceholderText("YouTube playlist URL"),
+      "https://www.youtube.com/playlist?list=PLx",
+    );
+    await user.click(screen.getByRole("button", { name: "Load" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("플레이리스트를 찾을 수 없습니다.");
+    expect(
+      screen.getByText(/비공개·삭제된 플레이리스트일 수 있어요/),
+    ).toBeInTheDocument();
+  });
+
+  it("ErrorNotice의 '다시 시도'가 플레이리스트 로드를 재시도한다", async () => {
+    mockedLoad
+      .mockRejectedValueOnce(
+        Object.assign(new Error("일시적 오류"), { code: "youtube_api_error" }),
+      )
+      .mockResolvedValueOnce(playlistRes(3));
+    render(<AnalysisFlow />);
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByPlaceholderText("YouTube playlist URL"),
+      "https://www.youtube.com/playlist?list=PLx",
+    );
+    await user.click(screen.getByRole("button", { name: "Load" }));
+    await screen.findByRole("alert");
+
+    await user.click(screen.getByRole("button", { name: "다시 시도" }));
+    // 재시도 성공 → 곡 로드 표시, 오류 사라짐
+    await screen.findByText("3곡 로드됨");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(mockedLoad).toHaveBeenCalledTimes(2);
+  });
 });
