@@ -32,9 +32,28 @@ describe("parseVideoTitle", () => {
       parseStatus: "parsed",
     });
   });
-  it("구분자가 없으면 needs_review를 반환한다", () => {
-    expect(parseVideoTitle("FULL SET @ Boiler Room London 2019")).toEqual({
-      parseStatus: "needs_review",
+
+  // 구분자 없는 제목(아티스트 미상) — DJ 플레이리스트에 흔함.
+  // 전체를 곡명으로 보고 제목-단독 유사도 매칭을 타게 한다(이전: needs_review로 버림).
+  it("구분자가 없으면 전체를 곡명으로 사용한다(아티스트 미상)", () => {
+    expect(parseVideoTitle("Ondas Do Mar")).toEqual({
+      parsedTitle: "Ondas Do Mar",
+      parseStatus: "parsed",
     });
+  });
+  it("구분자 없는 제목의 버전 괄호도 보존한다", () => {
+    expect(parseVideoTitle("Madan (Remix)")).toEqual({
+      parsedTitle: "Madan (Remix)",
+      parseStatus: "parsed",
+    });
+  });
+  it("구분자 없는 제목에서도 끝의 노이즈는 제거한다", () => {
+    expect(parseVideoTitle("Sol Clap (Official Audio)")).toEqual({
+      parsedTitle: "Sol Clap",
+      parseStatus: "parsed",
+    });
+  });
+  it("빈 문자열/공백만이면 needs_review", () => {
+    expect(parseVideoTitle("   ")).toEqual({ parseStatus: "needs_review" });
   });
 });
