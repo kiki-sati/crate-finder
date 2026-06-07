@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { loadMatchRows } from "@/app/results/loader";
+import { loadMatchRows, buildMatchRows } from "@/app/results/loader";
 import { saveAnalysis } from "@/services/analysis-handoff";
 
 beforeEach(() => {
@@ -108,5 +108,73 @@ describe("loadMatchRows", () => {
       rekordboxTracks: [],
     });
     expect(loadMatchRows()).toEqual([]);
+  });
+});
+
+describe("buildMatchRows", () => {
+  it("후보(candidates)의 rekordboxTrackId를 candidateTracks로 매핑한다", () => {
+    const rows = buildMatchRows({
+      results: [
+        {
+          id: "mr_1",
+          youtubeTrackId: "yt_1",
+          status: "needs_review",
+          confidence: "medium",
+          score: 0.6,
+          candidates: [
+            { rekordboxTrackId: "rb_1", score: 0.8, reason: "similar_title" },
+            { rekordboxTrackId: "rb_2", score: 0.7, reason: "similar_title" },
+          ],
+        },
+      ],
+      youtubeTracks: [
+        {
+          id: "yt_1",
+          videoId: "v1",
+          rawTitle: "A - B",
+          parseStatus: "needs_review",
+          parsedArtist: "A",
+          parsedTitle: "B",
+        },
+      ],
+      rekordboxTracks: [
+        { id: "rb_1", title: "B", artist: "A", normalizedTitle: "b" },
+        { id: "rb_2", title: "B2", artist: "A2", normalizedTitle: "b2" },
+      ],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].candidateTracks).toEqual({
+      rb_1: { id: "rb_1", title: "B", artist: "A", normalizedTitle: "b" },
+      rb_2: { id: "rb_2", title: "B2", artist: "A2", normalizedTitle: "b2" },
+    });
+  });
+
+  it("후보가 rekordboxTracks에 없으면 candidateTracks에서 제외한다", () => {
+    const rows = buildMatchRows({
+      results: [
+        {
+          id: "mr_1",
+          youtubeTrackId: "yt_1",
+          status: "needs_review",
+          confidence: "medium",
+          score: 0.6,
+          candidates: [
+            { rekordboxTrackId: "rb_gone", score: 0.8, reason: "similar_title" },
+          ],
+        },
+      ],
+      youtubeTracks: [
+        {
+          id: "yt_1",
+          videoId: "v1",
+          rawTitle: "A - B",
+          parseStatus: "needs_review",
+          parsedArtist: "A",
+          parsedTitle: "B",
+        },
+      ],
+      rekordboxTracks: [],
+    });
+    expect(rows[0].candidateTracks).toEqual({});
   });
 });

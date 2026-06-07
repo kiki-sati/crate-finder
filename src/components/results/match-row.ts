@@ -6,4 +6,6 @@ export type MatchRow = {
   result: MatchResult;
   youtubeTrack: YouTubeTrack;
   matchedTrack?: RekordboxTrack;
+  // needs_review 후보 표시용. rekordboxTrackId -> RekordboxTrack. 없으면 빈 객체 취급.
+  candidateTracks?: Record<string, RekordboxTrack>;
 };

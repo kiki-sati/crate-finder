@@ -8,7 +8,13 @@ import {
   ResultFilters,
   type ResultFilter,
 } from "@/components/results/ResultFilters";
-import { loadMatchRows } from "@/app/results/loader";
+import { buildMatchRows } from "@/app/results/loader";
+import {
+  readAnalysis,
+  saveAnalysis,
+  type AnalysisHandoff,
+} from "@/services/analysis-handoff";
+import { resolveMatch } from "@/lib/matcher/resolve";
 import type { MatchRow } from "@/components/results/match-row";
 
 function summarize(rows: MatchRow[]) {
@@ -21,27 +27,63 @@ function summarize(rows: MatchRow[]) {
 }
 
 export default function ResultsPage() {
+  // 단일 진실원본은 전체 핸드오프. rows는 여기서 파생(useMemo).
   // sessionStorage는 SSR에서 읽으면 hydration mismatch → mount 후 useEffect에서 채운다.
-  // 초기값을 []가 아닌 null로 두는 이유: 데이터가 있는 사용자에게 mount 직전
-  // "결과 없음"을 깜빡여 보여주지 않도록 미로드(null) 상태를 명시적으로 구분한다.
-  const [rows, setRows] = useState<MatchRow[] | null>(null);
+  // loaded 플래그로 미로드 상태를 명시 구분: 데이터가 있는 사용자에게 mount 직전
+  // "결과 없음"을 깜빡여 보여주지 않는다(기존 rows===null 의도 보존).
+  const [analysis, setAnalysis] = useState<AnalysisHandoff | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<ResultFilter>("all");
 
   useEffect(() => {
-    setRows(loadMatchRows());
+    setAnalysis(readAnalysis());
+    setLoaded(true);
   }, []);
 
+  const rows = useMemo(
+    () => (analysis ? buildMatchRows(analysis) : []),
+    [analysis],
+  );
+
+  // 후보 확정: 매칭 변환(resolveMatch)은 페이지에서 호출(계층 규칙) 후 저장.
+  function handleConfirm(resultId: string, rekordboxTrackId: string) {
+    setAnalysis((prev) => {
+      if (!prev) return prev;
+      const results = prev.results.map((r) =>
+        r.id === resultId
+          ? resolveMatch(r, { kind: "confirm", rekordboxTrackId })
+          : r,
+      );
+      const next = { ...prev, results };
+      saveAnalysis(next);
+      return next;
+    });
+  }
+
+  // 후보 거부: 누락으로 표시.
+  function handleReject(resultId: string) {
+    setAnalysis((prev) => {
+      if (!prev) return prev;
+      const results = prev.results.map((r) =>
+        r.id === resultId ? resolveMatch(r, { kind: "reject" }) : r,
+      );
+      const next = { ...prev, results };
+      saveAnalysis(next);
+      return next;
+    });
+  }
+
   // 요약은 필터와 무관하게 항상 전체 기준(PRD §4.1.4).
-  const summary = useMemo(() => (rows ? summarize(rows) : null), [rows]);
+  const summary = useMemo(() => summarize(rows), [rows]);
   const visible = useMemo(
     () =>
-      rows && filter !== "all"
+      filter !== "all"
         ? rows.filter((r) => r.result.status === filter)
-        : (rows ?? []),
+        : rows,
     [rows, filter],
   );
 
-  if (rows === null) {
+  if (!loaded) {
     return (
       <AppShell statusText="결과 불러오는 중…">
         <WindowPanel title="Match Results">
@@ -69,19 +111,23 @@ export default function ResultsPage() {
   }
 
   return (
-    <AppShell statusText={`${summary!.total} tracks analyzed`}>
+    <AppShell statusText={`${summary.total} tracks analyzed`}>
       <WindowPanel title="Match Results">
         <div className="flex flex-col gap-3 p-2">
           <p
             data-testid="result-summary"
             className="text-xs text-[color:var(--color-text-secondary)]"
           >
-            전체 {summary!.total} · 보유 {summary!.owned} · 누락 {summary!.missing} ·
-            확인필요 {summary!.needs_review}
+            전체 {summary.total} · 보유 {summary.owned} · 누락 {summary.missing} ·
+            확인필요 {summary.needs_review}
           </p>
           <ResultFilters value={filter} onChange={setFilter} />
         </div>
-        <MatchResultTable rows={visible} />
+        <MatchResultTable
+          rows={visible}
+          onConfirm={handleConfirm}
+          onReject={handleReject}
+        />
       </WindowPanel>
     </AppShell>
   );
