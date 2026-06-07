@@ -35,6 +35,22 @@ describe("ErrorNotice", () => {
     expect(screen.getByText(/20MB/)).toBeInTheDocument();
   });
 
+  it("youtube_error(라우트 catch-all)에도 해결 가이드를 보여준다", () => {
+    render(<ErrorNotice code="youtube_error" message="요청 실패" />);
+    expect(screen.getByText("요청 실패")).toBeInTheDocument();
+    expect(
+      screen.getByText(/요청을 처리하지 못했어요\. URL을 확인하고/),
+    ).toBeInTheDocument();
+  });
+
+  it("unknown(API 폴백) code에도 해결 가이드를 보여준다", () => {
+    render(<ErrorNotice code="unknown" message="알 수 없음" />);
+    expect(screen.getByText("알 수 없음")).toBeInTheDocument();
+    expect(
+      screen.getByText(/알 수 없는 오류가 발생했어요/),
+    ).toBeInTheDocument();
+  });
+
   it("알 수 없는 code면 전용 가이드를 표시하지 않는다", () => {
     render(<ErrorNotice code="totally_unknown_code" message="무언가 잘못됨" />);
     expect(screen.getByText("무언가 잘못됨")).toBeInTheDocument();

@@ -26,6 +26,9 @@ const GUIDES: Record<string, string> = {
   missing_file: "파일을 선택하세요.",
   rekordbox_error:
     "XML을 읽지 못했어요. Rekordbox에서 컬렉션을 다시 내보내 보세요.",
+  youtube_error:
+    "요청을 처리하지 못했어요. URL을 확인하고 잠시 후 다시 시도하세요.",
+  unknown: "알 수 없는 오류가 발생했어요. 잠시 후 다시 시도하세요.",
 };
 
 export function ErrorNotice({ code, message, onRetry }: ErrorNoticeProps) {
