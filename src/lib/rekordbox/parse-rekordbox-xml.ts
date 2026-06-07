@@ -17,6 +17,19 @@ export function parseRekordboxXml(xml: string): {
 } {
   const warnings: RekordboxParseWarning[] = [];
   const doc = parser.parse(xml);
+
+  // L2 UX 구분: Rekordbox 내보내기 XML은 반드시 DJ_PLAYLISTS 루트를 가진다.
+  // 루트가 없으면(iTunes plist·임의 XML·평문 등) "정상 0곡"이 아니라 형식 오류다.
+  // 0곡으로 조용히 통과시키면 "왜 0곡이지?" 혼란이 생기므로 명확히 throw한다.
+  // (유효 DJ_PLAYLISTS인데 COLLECTION이 비거나 없는 경우는 아래에서 정상 0곡 처리.)
+  // 보안(CLAUDE.md §보안): 메시지에 입력 원문/경로를 담지 않는 고정 문구만 사용.
+  // 코드 없는 일반 Error → 라우트가 rekordbox_error 폴백(FE 가이드 존재)으로 변환.
+  const hasRekordboxRoot =
+    doc != null && typeof doc === "object" && "DJ_PLAYLISTS" in doc;
+  if (!hasRekordboxRoot) {
+    throw new Error("Rekordbox XML 형식이 아닙니다(DJ_PLAYLISTS 루트 없음).");
+  }
+
   const collection = doc?.DJ_PLAYLISTS?.COLLECTION;
   const rawTracks: RawTrack[] = collection?.TRACK
     ? Array.isArray(collection.TRACK)
