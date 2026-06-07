@@ -35,4 +35,20 @@ describe("parseRekordboxXml", () => {
     expect(tracks).toEqual([]);
     expect(warnings.some((w) => w.code === "empty_collection")).toBe(true);
   });
+
+  // 보안(CLAUDE.md §보안): 로컬 파일 절대경로를 응답에 노출하지 않는다.
+  // Rekordbox Location은 file://localhost/Users/<사용자명>/... 형태라
+  // OS 계정명이 담긴 로컬 경로다. 어떤 소비처도 쓰지 않으므로 담지 않는다.
+  it("로컬 파일 경로(Location)를 트랙에 담지 않는다", () => {
+    const { tracks } = parseRekordboxXml(XML);
+    expect(tracks[0].location).toBeUndefined();
+    expect(tracks[1].location).toBeUndefined();
+  });
+
+  it("직렬화된 응답에 file:// 로컬 경로가 새지 않는다", () => {
+    const { tracks } = parseRekordboxXml(XML);
+    const serialized = JSON.stringify(tracks);
+    expect(serialized).not.toContain("file://");
+    expect(serialized).not.toContain("/Users/");
+  });
 });

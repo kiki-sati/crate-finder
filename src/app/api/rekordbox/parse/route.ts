@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { ApiResult, RekordboxParseResponse } from "@/types/api";
 import { parseUploadedXml } from "@/services/rekordbox.service";
+import { validateXmlFile } from "@/lib/rekordbox/validate-xml-file";
 
 export async function POST(
   req: Request,
@@ -14,6 +15,10 @@ export async function POST(
         { status: 400 },
       );
     }
+    // 본문을 메모리로 읽기 전에 확장자/크기를 먼저 검증한다.
+    // 20MB 초과 파일을 file.text()로 통째로 올린 뒤 거부하면 메모리 선점
+    // (경미한 DoS 표면)이 생기므로, 읽기 전에 차단한다.
+    validateXmlFile({ name: file.name, size: file.size });
     const xml = await file.text();
     const data = parseUploadedXml({ name: file.name, size: file.size }, xml);
     // 원본 xml은 여기서 폐기(저장/로그 금지).

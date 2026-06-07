@@ -52,7 +52,10 @@ export function parseRekordboxXml(xml: string): {
         totalTime !== undefined && !Number.isNaN(totalTime)
           ? totalTime * 1000
           : undefined,
-      location: t.Location,
+      // 보안(CLAUDE.md §보안): t.Location은 file://localhost/Users/<사용자명>/...
+      // 형태의 로컬 파일 절대경로(OS 계정명 포함)다. 매칭·표시 등 어떤 소비처도
+      // 사용하지 않으므로 응답에 담지 않는다. RekordboxTrack.location은 optional —
+      // 미설정 시 JSON 직렬화에서 자연히 제외되어 클라이언트로 누출되지 않는다.
       normalizedTitle: normalizeTitle(title),
       normalizedArtist: normalizeArtist(artist),
     };
