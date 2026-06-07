@@ -74,6 +74,38 @@ describe("POST /api/rekordbox/parse — 에러 메시지 누출 차단(ADR-004)"
     expect(JSON.stringify(body)).not.toContain("file://");
   });
 
+  it("DJ_PLAYLISTS 루트가 없는 .xml은 rekordbox_error + 고정 안내문으로 처리한다", async () => {
+    // L2 UX: Rekordbox 내보내기가 아닌 XML을 0곡으로 통과시키지 않고 형식 오류로 알린다.
+    const notRekordbox = `<foo SECRET="LEAK_MARKER_RB"><bar location="file://localhost/Users/dj/x.mp3"/></foo>`;
+    const file = makeFile({
+      name: "itunes.xml",
+      size: notRekordbox.length,
+      text: notRekordbox,
+    });
+    const res = await POST(makeRequest(file));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.ok).toBe(false);
+    // 코드 없는 형식 오류 → 라우트가 rekordbox_error 폴백으로 변환(FE 가이드 존재).
+    expect(body.error.code).toBe("rekordbox_error");
+    // 입력 원문/경로가 응답에 새지 않는다.
+    expect(body.error.message).not.toContain("LEAK_MARKER_RB");
+    expect(JSON.stringify(body)).not.toContain("LEAK_MARKER_RB");
+    expect(JSON.stringify(body)).not.toContain("file://");
+  });
+
+  it("유효 DJ_PLAYLISTS + 빈 COLLECTION은 200 + 0곡으로 유지한다(회귀 방지)", async () => {
+    const empty = `<DJ_PLAYLISTS><COLLECTION Entries="0"></COLLECTION></DJ_PLAYLISTS>`;
+    const file = makeFile({ name: "empty.xml", size: empty.length, text: empty });
+    const res = await POST(makeRequest(file));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.ok).toBe(true);
+    expect(body.data.trackCount).toBe(0);
+  });
+
   it("도메인 에러(.txt 확장자)의 안전 메시지는 그대로 노출한다", async () => {
     const file = makeFile({ name: "evil.txt", size: 100 });
     const res = await POST(makeRequest(file));
