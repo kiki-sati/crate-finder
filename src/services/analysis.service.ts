@@ -9,7 +9,7 @@ import type {
 import type { MatchResult } from "@/types/match";
 import { parsePlaylistUrl } from "@/lib/youtube/parse-playlist-url";
 import { matchTracks } from "@/lib/matcher/match";
-import { readApiResult } from "@/services/http";
+import { readApiResult, ApiError } from "@/services/http";
 
 export async function loadPlaylist(
   url: string,
@@ -25,7 +25,8 @@ export async function loadPlaylist(
 
 export async function parseXml(file: File): Promise<RekordboxParseResponse> {
   if (!file.name.toLowerCase().endsWith(".xml")) {
-    throw new Error("XML 파일만 업로드할 수 있습니다.");
+    // 클라이언트 측 사전 검증도 라우트와 동일한 code 체계를 따른다(invalid_extension).
+    throw new ApiError("invalid_extension", "XML 파일만 업로드할 수 있습니다.");
   }
   const form = new FormData();
   form.append("file", file);

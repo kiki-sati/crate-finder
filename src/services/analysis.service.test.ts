@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
+import { ApiError } from "@/services/http";
 import type {
   YouTubePlaylistResponse,
   RekordboxParseResponse,
@@ -67,10 +68,12 @@ describe("analysis.service", () => {
     ).rejects.toThrow();
   });
 
-  it("parseXml: 비-xml 파일이면 fetch 전에 throw", async () => {
+  it("parseXml: 비-xml 파일이면 fetch 전에 ApiError(code=invalid_extension)로 throw", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch");
     const file = new File(["x"], "library.txt", { type: "text/plain" });
-    await expect(parseXml(file)).rejects.toThrow();
+    const promise = parseXml(file);
+    await expect(promise).rejects.toBeInstanceOf(ApiError);
+    await expect(promise).rejects.toMatchObject({ code: "invalid_extension" });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
