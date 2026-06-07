@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   fetchPlaylist,
   demoFetcher,
+  resolveFetcher,
+  stubFetcher,
   DEMO_PLAYLIST_ID,
 } from "@/services/youtube.service";
 
@@ -44,5 +46,30 @@ describe("demoFetcher (시연용)", () => {
     expect(res.tracks.length).toBeGreaterThanOrEqual(4);
     expect(res.tracks[0].parsedArtist).toBe("Daft Punk");
     expect(res.unavailableCount).toBeGreaterThan(0);
+  });
+});
+
+describe("resolveFetcher (기본 fetcher 결정)", () => {
+  it("주입 fetcher가 있으면 그대로 사용한다(env/데모보다 우선)", () => {
+    const injected = demoFetcher;
+    expect(resolveFetcher(DEMO_PLAYLIST_ID, "any-key", injected)).toBe(injected);
+  });
+
+  it("데모 playlist ID면 demoFetcher를 쓴다", () => {
+    expect(resolveFetcher(DEMO_PLAYLIST_ID, "any-key", undefined)).toBe(
+      demoFetcher,
+    );
+  });
+
+  it("API 키가 없으면 stubFetcher로 폴백한다", () => {
+    expect(resolveFetcher("PLreal", undefined, undefined)).toBe(stubFetcher);
+    expect(resolveFetcher("PLreal", "", undefined)).toBe(stubFetcher);
+  });
+
+  it("API 키가 있으면 실제 API fetcher를 생성한다(stub/demo 아님)", () => {
+    const f = resolveFetcher("PLreal", "real-key", undefined);
+    expect(f).not.toBe(stubFetcher);
+    expect(f).not.toBe(demoFetcher);
+    expect(typeof f).toBe("function");
   });
 });

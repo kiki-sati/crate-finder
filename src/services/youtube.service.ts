@@ -2,6 +2,7 @@ import type { YouTubeTrack } from "@/types/track";
 import type { YouTubePlaylistResponse } from "@/types/api";
 import { parsePlaylistUrl } from "@/lib/youtube/parse-playlist-url";
 import { parseVideoTitle } from "@/lib/youtube/parse-video-title";
+import { createYouTubeApiFetcher } from "@/services/youtube-api-fetcher";
 import { sampleYouTubeTracks } from "@/mocks/sample-data";
 
 export type RawPlaylistItem = {
@@ -15,9 +16,12 @@ export type PlaylistFetcher = (
   playlistId: string,
 ) => Promise<{ title?: string; items: RawPlaylistItem[] }>;
 
-// 기본 스텁: 실제 YouTube API 키 연동(P1) 전까지 빈 결과를 반환한다.
+// 기본 스텁: YOUTUBE_API_KEY 미설정 시 빈 결과를 반환한다(키 없이도 앱이 깨지지 않게).
 // 라우트는 이 스텁 대신 환경에 따라 실제 fetcher를 주입할 수 있다.
-const stubFetcher: PlaylistFetcher = async () => ({ title: undefined, items: [] });
+export const stubFetcher: PlaylistFetcher = async () => ({
+  title: undefined,
+  items: [],
+});
 
 // 시연용 데모 playlist ID. 이 값으로 들어오면 샘플 곡 목록을 반환한다.
 // 실제 YouTube API 연동(P1) 시 이 분기만 제거하면 된다(격리된 단일 지점).
@@ -36,15 +40,29 @@ export const demoFetcher: PlaylistFetcher = async () => ({
   })),
 });
 
-/** URL에서 playlistId를 추출하고, 주입된 fetcher로 곡 목록을 만든다. */
+/**
+ * 기본 fetcher를 결정한다(우선순위: 주입 > 데모 > 실제 API > stub).
+ * env 의존을 한 곳으로 격리하기 위해 apiKey를 인자로 받는다(테스트는 인자 주입).
+ */
+export function resolveFetcher(
+  playlistId: string,
+  apiKey: string | undefined,
+  injected?: PlaylistFetcher,
+): PlaylistFetcher {
+  if (injected) return injected;
+  if (playlistId === DEMO_PLAYLIST_ID) return demoFetcher;
+  if (apiKey) return createYouTubeApiFetcher({ apiKey });
+  return stubFetcher; // 키 미설정 — 빈 결과로 graceful 동작.
+}
+
+/** URL에서 playlistId를 추출하고, 결정된 fetcher로 곡 목록을 만든다. */
 export async function fetchPlaylist(
   url: string,
   fetcher?: PlaylistFetcher,
 ): Promise<YouTubePlaylistResponse> {
   const playlistId = parsePlaylistUrl(url);
-  // fetcher 미주입 시: 데모 ID면 샘플 데이터, 아니면 빈 스텁(실제 API 연동 전).
-  const resolved =
-    fetcher ?? (playlistId === DEMO_PLAYLIST_ID ? demoFetcher : stubFetcher);
+  // 키는 서버 환경변수에서만 읽는다(NEXT_PUBLIC_ 금지, CLAUDE.md §보안).
+  const resolved = resolveFetcher(playlistId, process.env.YOUTUBE_API_KEY, fetcher);
   const { title, items } = await resolved(playlistId);
   let unavailableCount = 0;
   const tracks: YouTubeTrack[] = items.map((item, i) => {
