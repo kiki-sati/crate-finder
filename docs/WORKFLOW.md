@@ -49,8 +49,45 @@ step 파일이 준비되면 두 가지 실행 방식 중 택한다.
 | `scripts/lint.sh` / `build.sh` / `test.sh` | 각각 단일 책임 (package.json 없으면 graceful skip) |
 | `scripts/verify.sh` | 위 셋을 조합한 검증 — step AC와 Stop hook이 호출 |
 | `scripts/execute.py` | harness step 오케스트레이터 |
-| `/harness` · `/review` | step 설계 · 변경 리뷰 슬래시 커맨드 |
+| `/harness` · `/review` · `/ship` | step 설계 · 변경 리뷰 · 검증→커밋→push→PR 자동화 |
 | `.claude/settings.json` hook | Stop 시 `verify.sh` 자동 실행, 위험 명령(`rm -rf` 등) 사전 차단 |
+
+---
+
+## 병렬 트랙: BE / FE / QA (서브에이전트 + 워크트리)
+
+독립적인 작업은 **트랙별 전용 서브에이전트**가 **격리된 git 워크트리**에서 병렬로 진행한다.
+에이전트 정의는 `.claude/agents/{backend,frontend,test-verify}.md`(git 추적, 팀 공유)다.
+
+| 트랙 | 에이전트 | 워크트리 | 쓰기 화이트리스트 |
+|---|---|---|---|
+| **BE** | `backend` | `../crate-finder-be` | `src/lib/**` · `src/services/**` · `src/app/api/**` + 해당 테스트 |
+| **FE** | `frontend` | `../crate-finder-fe` | `src/components/**` · `src/styles/**` · `app/page.tsx`·`layout.tsx` + 해당 테스트 |
+| **QA** | `test-verify` | `../crate-finder-qa` | `scripts/**` · `src/tests/**` · 루트 검증 설정 |
+
+**공유 계약 = `src/types/**` · `src/mocks/**`.** BE·FE는 이 영역을 **읽기 전용**으로 다룬다.
+부족하면 고치지 말고 멈춰 보고 → 계약을 **별도 PR로 먼저** 올리고 각 트랙 PR을 그 위에 쌓는다(stacked).
+
+**운영 규칙**
+- **트랙별 PR 분리.** 독립 트랙을 한 PR로 묶지 않는다(CLAUDE.md).
+- 새 작업은 항상 **최신 `main`에서 브랜치를 새로 따서** 워크트리에 올린다(낡은 브랜치 위에서 작업 금지).
+- QA(`test-verify`)는 **게이트키퍼**다. FE/BE 자기보고를 신뢰하지 않고 워크트리에서 `verify.sh`를 직접 재실행 + diff 화이트리스트 대조 + 보안 감사 후 통합을 권고한다.
+- 워크트리 생성: `git worktree add ../crate-finder-be -b feature/{slug} main` (트랙별로 반복).
+
+### 워크트리 셋업 (1회)
+
+```bash
+# 메인 저장소(crate-finder)에서, 최신 main 기준으로 트랙 워크트리 생성
+git worktree add ../crate-finder-be -b be/{slug}   main   # BE 트랙
+git worktree add ../crate-finder-fe -b fe/{slug}   main   # FE 트랙
+git worktree add ../crate-finder-qa -b qa/{slug}   main   # QA 트랙
+
+git worktree list          # 확인
+git worktree remove ../crate-finder-be   # 트랙 종료 시 정리
+```
+
+> `.claude/worktrees/*`(세션 임시 워크트리)는 `.next/` 빌드 산출물을 품어 lint를 오염시키므로
+> `eslint.config.mjs`가 `.claude/**`를 ignore한다. 트랙 워크트리는 **저장소 바깥**(`../crate-finder-*`)에 둔다.
 
 ---
 
@@ -71,7 +108,11 @@ Plan Mode 설계 → /harness로 step 분할 → (한 step씩) 구현
 
 ---
 
-## 다음 실전 작업
+## 진행 현황
 
-현재 코드는 0줄(package.json 없음)이라 atomic scripts/hook은 graceful skip 상태다.
-**첫 `/harness` task는 Phase 1 Project Setup**(Next.js App Router + TS strict + Tailwind + Vitest 스캐폴딩, package.json 생성)이어야 verify.sh/hook이 실제로 동작한다. 이후 Phase 2 Ingestion → 3 Matching → 4 UI → 5 Pricing → 6 Hardening (순서는 `docs/ARCHITECTURE.md` §19).
+Phase 1~5 완료(main 반영): 스캐폴딩 · Ingestion(YouTube/Rekordbox 파싱·API) · Matching(매칭 엔진) ·
+UI(레트로 UI + 결과 테이블) · Pricing & Actions · 분석 내역(localStorage).
+`scripts/verify.sh`/Stop hook은 실제 동작 중(lint→build→test→typecheck).
+
+**다음: Phase 6 Hardening** — 오류 메시지 정리 · 삭제 기능 점검 · **보안 점검**(XML 원본 미저장·API Key·로그 노출) · 성능 최적화.
+Phase 순서의 정본은 `docs/ARCHITECTURE.md` §19.
