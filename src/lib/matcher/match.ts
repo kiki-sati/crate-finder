@@ -14,7 +14,11 @@ import {
   normalizeTitle,
   buildMatchKey,
 } from "@/lib/normalizer";
-import { diceCoefficient } from "@/lib/matcher/similarity";
+import {
+  diceFromPrepared,
+  prepareGrams,
+  type PreparedGrams,
+} from "@/lib/matcher/similarity";
 import { versionsMatch } from "@/lib/matcher/version";
 import {
   TITLE_WEIGHT,
@@ -37,6 +41,27 @@ export function buildRekordboxIndex(
   return index;
 }
 
+// RB 트랙의 정규화 제목/아티스트 bigram 사전계산값. 루프 밖에서 1회 계산해 읽기 전용 공유.
+type PreparedRekordboxTrack = {
+  track: RekordboxTrack;
+  title: PreparedGrams;
+  artist: PreparedGrams | undefined;
+};
+
+// RB 라이브러리 전체의 bigram을 1회 사전계산. YT 트랙 수만큼 재계산되던 비용을 제거한다.
+function prepareRekordboxTracks(
+  tracks: RekordboxTrack[],
+): PreparedRekordboxTrack[] {
+  return tracks.map((track) => ({
+    track,
+    title: prepareGrams(track.normalizedTitle),
+    artist:
+      track.normalizedArtist !== undefined
+        ? prepareGrams(track.normalizedArtist)
+        : undefined,
+  }));
+}
+
 function scoreToStatus(score: number): {
   status: TrackStatus;
   confidence: MatchConfidence;
@@ -51,7 +76,7 @@ function scoreToStatus(score: number): {
 
 export function matchTrack(
   yt: YouTubeTrack,
-  rbTracks: RekordboxTrack[],
+  preparedRb: PreparedRekordboxTrack[],
   rbIndex: Map<string, RekordboxTrack>,
 ): MatchResult {
   const base = { id: `match_${yt.id}`, youtubeTrackId: yt.id };
@@ -83,14 +108,27 @@ export function matchTrack(
     };
   }
 
-  // 3. 2차 유사도
+  // 3. 2차 유사도. YT측 bigram은 트랙당 1회, RB측은 사전계산값을 읽기 전용 재사용.
   const hasArtist = ytArtist !== undefined;
-  const scored = rbTracks.map((rb) => {
-    const titleSim = diceCoefficient(ytTitle, rb.normalizedTitle);
+  const ytTitleGrams = prepareGrams(ytTitle);
+  const ytArtistGrams = hasArtist ? prepareGrams(ytArtist!) : undefined;
+  const scored = preparedRb.map((p) => {
+    const rb = p.track;
+    const titleSim = diceFromPrepared(
+      ytTitleGrams,
+      p.title,
+      ytTitle,
+      rb.normalizedTitle,
+    );
     let score: number;
     let reason: MatchCandidate["reason"];
-    if (hasArtist && rb.normalizedArtist) {
-      const artistSim = diceCoefficient(ytArtist!, rb.normalizedArtist);
+    if (hasArtist && rb.normalizedArtist && p.artist) {
+      const artistSim = diceFromPrepared(
+        ytArtistGrams!,
+        p.artist,
+        ytArtist!,
+        rb.normalizedArtist,
+      );
       score = TITLE_WEIGHT * titleSim + ARTIST_WEIGHT * artistSim;
       reason = "similar_title_artist";
     } else {
@@ -154,5 +192,7 @@ export function matchTracks(
   rbTracks: RekordboxTrack[],
 ): MatchResult[] {
   const rbIndex = buildRekordboxIndex(rbTracks);
-  return ytTracks.map((yt) => matchTrack(yt, rbTracks, rbIndex));
+  // RB측 bigram을 1회만 사전계산해 모든 YT 트랙 비교에서 읽기 전용 재사용(결과 불변, 성능만).
+  const preparedRb = prepareRekordboxTracks(rbTracks);
+  return ytTracks.map((yt) => matchTrack(yt, preparedRb, rbIndex));
 }
