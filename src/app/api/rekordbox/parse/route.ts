@@ -24,9 +24,15 @@ export async function POST(
     // 원본 xml은 여기서 폐기(저장/로그 금지).
     return NextResponse.json({ ok: true, data });
   } catch (e) {
-    const code =
-      e && typeof e === "object" && "code" in e ? String((e as { code: unknown }).code) : "rekordbox_error";
-    const message = e instanceof Error ? e.message : "파싱 중 오류가 발생했습니다.";
+    // 보안(ADR-004, CLAUDE.md §보안): 우리가 정의한 도메인 에러(자체 code 보유)의
+    // 메시지만 신뢰해 노출한다. 파서 내부 에러(fast-xml-parser 등)는 원시 메시지에
+    // XML 원문 조각·로컬 경로가 박혀 누출되므로, 고정 안내문으로 치환한다.
+    const hasCode = e !== null && typeof e === "object" && "code" in e;
+    const code = hasCode ? String((e as { code: unknown }).code) : "rekordbox_error";
+    const message =
+      hasCode && e instanceof Error
+        ? e.message
+        : "XML 파일을 읽지 못했습니다. Rekordbox에서 내보낸 올바른 XML인지 확인해 주세요.";
     return NextResponse.json({ ok: false, error: { code, message } }, { status: 400 });
   }
 }
