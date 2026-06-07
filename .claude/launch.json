@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "FE preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "/Users/kimrumm/IdeaProjects/crate-finder-fe", "run", "dev", "--", "--port", "3100"],
+      "port": 3100
+    }
+  ]
+}
