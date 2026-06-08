@@ -16,6 +16,14 @@ export type PlaylistFetcher = (
   playlistId: string,
 ) => Promise<{ title?: string; items: RawPlaylistItem[] }>;
 
+// 유튜브 자동 아티스트 채널("아티스트명 - Topic")에서 아티스트를 복원한다.
+// 제목만 있는(구분자 없는) 트랙의 아티스트 힌트로만 쓰인다(매칭 정확도 보강).
+function artistFromChannel(channelTitle?: string): string | undefined {
+  if (!channelTitle) return undefined;
+  const m = channelTitle.match(/^(.+?)\s*-\s*Topic$/);
+  return m ? m[1].trim() : undefined;
+}
+
 // 기본 스텁: YOUTUBE_API_KEY 미설정 시 빈 결과를 반환한다(키 없이도 앱이 깨지지 않게).
 // 라우트는 이 스텁 대신 환경에 따라 실제 fetcher를 주입할 수 있다.
 export const stubFetcher: PlaylistFetcher = async () => ({
@@ -78,6 +86,12 @@ export async function fetchPlaylist(
       };
     }
     const parsed = parseVideoTitle(item.rawTitle);
+    // 제목은 파싱됐는데 아티스트가 없을 때만 "- Topic" 채널명으로 보강한다.
+    // 구분자로 이미 아티스트가 잡혔으면 원본 우선(채널 힌트 무시). parseStatus는 그대로.
+    const channelArtist =
+      parsed.parsedTitle && !parsed.parsedArtist
+        ? artistFromChannel(item.channelTitle)
+        : undefined;
     return {
       id: `yt_${i + 1}`,
       videoId: item.videoId,
@@ -85,6 +99,7 @@ export async function fetchPlaylist(
       channelTitle: item.channelTitle,
       publishedAt: item.publishedAt,
       ...parsed,
+      ...(channelArtist ? { parsedArtist: channelArtist } : {}),
     };
   });
   return { playlistId, title, tracks, unavailableCount };

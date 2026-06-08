@@ -49,6 +49,79 @@ describe("demoFetcher (시연용)", () => {
   });
 });
 
+describe("채널명 아티스트 힌트 (\"X - Topic\")", () => {
+  const playlist = "https://www.youtube.com/playlist?list=PLtest";
+
+  it("제목만 있는 트랙은 \"X - Topic\" 채널명에서 아티스트를 보강한다", async () => {
+    const res = await fetchPlaylist(playlist, async () => ({
+      items: [
+        {
+          videoId: "v1",
+          rawTitle: "Ondas Do Mar",
+          available: true,
+          channelTitle: "Nu Guinea - Topic",
+        },
+      ],
+    }));
+    expect(res.tracks[0].parsedArtist).toBe("Nu Guinea");
+    expect(res.tracks[0].parsedTitle).toBe("Ondas Do Mar");
+    expect(res.tracks[0].parseStatus).toBe("parsed");
+    expect(res.tracks[0].rawTitle).toBe("Ondas Do Mar"); // 원본 불변
+  });
+
+  it("non-Topic 채널이면 아티스트를 보강하지 않는다", async () => {
+    const res = await fetchPlaylist(playlist, async () => ({
+      items: [
+        {
+          videoId: "v1",
+          rawTitle: "Ondas Do Mar",
+          available: true,
+          channelTitle: "Some Curator",
+        },
+      ],
+    }));
+    expect(res.tracks[0].parsedArtist).toBeUndefined();
+    expect(res.tracks[0].parseStatus).toBe("parsed");
+  });
+
+  it("구분자로 아티스트가 이미 파싱되면 채널 힌트를 무시한다(원본 우선)", async () => {
+    const res = await fetchPlaylist(playlist, async () => ({
+      items: [
+        {
+          videoId: "v1",
+          rawTitle: "Daft Punk - One More Time",
+          available: true,
+          channelTitle: "SomeoneElse - Topic",
+        },
+      ],
+    }));
+    expect(res.tracks[0].parsedArtist).toBe("Daft Punk");
+  });
+
+  it("channelTitle이 없으면 아티스트는 undefined로 유지된다", async () => {
+    const res = await fetchPlaylist(playlist, async () => ({
+      items: [{ videoId: "v1", rawTitle: "Ondas Do Mar", available: true }],
+    }));
+    expect(res.tracks[0].parsedArtist).toBeUndefined();
+    expect(res.tracks[0].parseStatus).toBe("parsed");
+  });
+
+  it("unavailable 트랙엔 채널 힌트를 적용하지 않는다", async () => {
+    const res = await fetchPlaylist(playlist, async () => ({
+      items: [
+        {
+          videoId: "v1",
+          rawTitle: "[Deleted video]",
+          available: false,
+          channelTitle: "Nu Guinea - Topic",
+        },
+      ],
+    }));
+    expect(res.tracks[0].parseStatus).toBe("unavailable");
+    expect(res.tracks[0].parsedArtist).toBeUndefined();
+  });
+});
+
 describe("resolveFetcher (기본 fetcher 결정)", () => {
   it("주입 fetcher가 있으면 그대로 사용한다(env/데모보다 우선)", () => {
     const injected = demoFetcher;
