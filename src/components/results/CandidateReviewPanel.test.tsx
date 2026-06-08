@@ -135,7 +135,7 @@ describe("CandidateReviewPanel", () => {
       />,
     );
     await userEvent.click(
-      screen.getByRole("button", { name: "누락으로 표시" }),
+      screen.getByRole("button", { name: "미보유로 표시" }),
     );
     expect(onReject).toHaveBeenCalledTimes(1);
   });
@@ -169,7 +169,7 @@ describe("CandidateReviewPanel", () => {
       screen.queryByRole("button", { name: "이 곡으로 확정" }),
     ).toBeNull();
     await userEvent.click(
-      screen.getByRole("button", { name: "누락으로 표시" }),
+      screen.getByRole("button", { name: "미보유로 표시" }),
     );
     expect(onReject).toHaveBeenCalledTimes(1);
   });

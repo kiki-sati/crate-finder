@@ -96,7 +96,7 @@ export default function HistoryPage() {
                 {s.playlistUrl}
               </span>
               <span className="text-xs">
-                {`전체 ${s.totalTrackCount} · 보유 ${s.ownedCount} · 누락 ${s.missingCount} · 확인필요 ${s.reviewCount}`}
+                {`전체 ${s.totalTrackCount} · 보유 ${s.ownedCount} · 미보유 ${s.missingCount} · 확인필요 ${s.reviewCount}`}
               </span>
               <span className="flex gap-2">
                 <Button

@@ -35,7 +35,7 @@ export function CandidateReviewPanel({
 }: CandidateReviewPanelProps) {
   const rejectButton = (
     <Button variant="secondary" onClick={onReject}>
-      누락으로 표시
+      미보유로 표시
     </Button>
   );
 
@@ -43,7 +43,7 @@ export function CandidateReviewPanel({
     return (
       <div className="flex flex-col items-start gap-2 p-3">
         <p className="text-xs text-[color:var(--color-text-muted)]">
-          후보 없음 — 누락으로 표시
+          후보 없음 — 미보유로 표시
         </p>
         {rejectButton}
       </div>

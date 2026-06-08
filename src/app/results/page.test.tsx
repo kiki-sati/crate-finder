@@ -194,7 +194,7 @@ describe("ResultsPage", () => {
 
     const summary = await screen.findByTestId("result-summary");
     await userEvent.click(screen.getByRole("button", { name: "확인" }));
-    await userEvent.click(screen.getByRole("button", { name: "누락으로 표시" }));
+    await userEvent.click(screen.getByRole("button", { name: "미보유로 표시" }));
 
     expect(summary).toHaveTextContent("미보유 1");
     expect(summary).toHaveTextContent("확인필요 0");
