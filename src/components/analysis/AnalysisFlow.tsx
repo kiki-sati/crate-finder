@@ -12,6 +12,10 @@ import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
 import { saveAnalysis } from "@/services/analysis-handoff";
 import { addSession } from "@/services/analysis-history";
 import { takeRerunUrl } from "@/services/rerun-handoff";
+import {
+  loadManualDecisions,
+  applyManualDecisions,
+} from "@/services/manual-match-rules";
 import type {
   YouTubePlaylistResponse,
   RekordboxParseResponse,
@@ -81,8 +85,15 @@ export function AnalysisFlow() {
     setMatching(true);
     try {
       const results = await runMatch(playlist, library);
-      saveAnalysis({
+      // 저장된 수동 결정(확정/거부)을 분석 결과에 자동 재적용한다(videoId 기준).
+      // 이후 저장·내역 카운트는 모두 규칙 적용본(ruled) 기준.
+      const ruled = applyManualDecisions(
         results,
+        playlist.tracks,
+        loadManualDecisions(),
+      );
+      saveAnalysis({
+        results: ruled,
         youtubeTracks: playlist.tracks,
         rekordboxTracks: library.tracks,
       });
@@ -90,10 +101,10 @@ export function AnalysisFlow() {
       addSession({
         playlistUrl,
         playlistId: playlist.playlistId,
-        totalTrackCount: results.length,
-        ownedCount: results.filter((r) => r.status === "owned").length,
-        missingCount: results.filter((r) => r.status === "missing").length,
-        reviewCount: results.filter((r) => r.status === "needs_review").length,
+        totalTrackCount: ruled.length,
+        ownedCount: ruled.filter((r) => r.status === "owned").length,
+        missingCount: ruled.filter((r) => r.status === "missing").length,
+        reviewCount: ruled.filter((r) => r.status === "needs_review").length,
       });
       router.push("/results");
     } catch (e) {

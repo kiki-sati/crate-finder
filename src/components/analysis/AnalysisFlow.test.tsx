@@ -12,11 +12,20 @@ vi.mock("@/services/analysis.service", () => ({
 vi.mock("@/services/analysis-handoff", () => ({ saveAnalysis: vi.fn() }));
 vi.mock("@/services/analysis-history", () => ({ addSession: vi.fn() }));
 vi.mock("@/services/rerun-handoff", () => ({ takeRerunUrl: vi.fn(() => null) }));
+// 수동 결정 적용은 서비스로 위임. 기본: 결정 없음·원본 그대로 반환(per-test 덮어쓰기).
+vi.mock("@/services/manual-match-rules", () => ({
+  loadManualDecisions: vi.fn(() => ({})),
+  applyManualDecisions: vi.fn((results) => results),
+}));
 
 import { loadPlaylist, parseXml, runMatch } from "@/services/analysis.service";
 import { saveAnalysis } from "@/services/analysis-handoff";
 import { addSession } from "@/services/analysis-history";
 import { takeRerunUrl } from "@/services/rerun-handoff";
+import {
+  loadManualDecisions,
+  applyManualDecisions,
+} from "@/services/manual-match-rules";
 import { AnalysisFlow } from "@/components/analysis/AnalysisFlow";
 
 const mockedLoad = vi.mocked(loadPlaylist);
@@ -25,6 +34,8 @@ const mockedRun = vi.mocked(runMatch);
 const mockedSave = vi.mocked(saveAnalysis);
 const mockedAddSession = vi.mocked(addSession);
 const mockedTakeRerun = vi.mocked(takeRerunUrl);
+const mockedLoadDecisions = vi.mocked(loadManualDecisions);
+const mockedApplyDecisions = vi.mocked(applyManualDecisions);
 
 function playlistRes(trackCount: number) {
   return {
@@ -44,6 +55,9 @@ function parseRes(trackCount: number) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockedTakeRerun.mockReturnValue(null); // 기본: rerun 없음
+  // clearAllMocks가 factory 구현을 비우므로 기본 동작을 매 테스트 복원.
+  mockedLoadDecisions.mockReturnValue({});
+  mockedApplyDecisions.mockImplementation((results) => results);
 });
 
 describe("AnalysisFlow", () => {
@@ -237,6 +251,102 @@ describe("AnalysisFlow", () => {
     expect(
       screen.getByText(/비공개·삭제된 플레이리스트일 수 있어요/),
     ).toBeInTheDocument();
+  });
+
+  it("Run 시 저장된 수동 결정을 결과에 적용한 뒤 저장한다", async () => {
+    mockedLoad.mockResolvedValue(playlistRes(2));
+    mockedParse.mockResolvedValue(parseRes(5));
+    const rawResults = [
+      { id: "mr_1", youtubeTrackId: "yt_1", status: "needs_review", confidence: "medium", score: 0.6, candidates: [] },
+    ] as unknown as Awaited<ReturnType<typeof runMatch>>;
+    mockedRun.mockResolvedValue(rawResults);
+    // 규칙 적용 결과: needs_review → owned 1건으로 변환됐다고 가정.
+    const ruledResults = [
+      { id: "mr_1", youtubeTrackId: "yt_1", status: "owned", confidence: "high", score: 1, candidates: [] },
+    ] as unknown as ReturnType<typeof applyManualDecisions>;
+    const decisions = { vid_1: { kind: "confirm", rekordboxTrackId: "rb_1" } } as ReturnType<
+      typeof loadManualDecisions
+    >;
+    mockedLoadDecisions.mockReturnValue(decisions);
+    mockedApplyDecisions.mockReturnValue(ruledResults);
+
+    const { container } = render(<AnalysisFlow />);
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByPlaceholderText("YouTube playlist URL"),
+      "https://www.youtube.com/playlist?list=PL1",
+    );
+    await user.click(screen.getByRole("button", { name: "Load" }));
+    await screen.findByText("2곡 로드됨");
+
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["<xml/>"], "library.xml", { type: "text/xml" }),
+    );
+    await screen.findByText(/library\.xml/);
+
+    await user.click(screen.getByRole("button", { name: "Run Match" }));
+    await waitFor(() => expect(mockedSave).toHaveBeenCalledTimes(1));
+
+    // applyManualDecisions(runMatch 결과, 플레이리스트 트랙, 로드된 결정)로 호출.
+    expect(mockedLoadDecisions).toHaveBeenCalledTimes(1);
+    expect(mockedApplyDecisions).toHaveBeenCalledTimes(1);
+    const [appliedResults, appliedTracks, appliedRules] =
+      mockedApplyDecisions.mock.calls[0];
+    expect(appliedResults).toBe(rawResults);
+    expect(appliedTracks).toHaveLength(2);
+    expect(appliedRules).toBe(decisions);
+
+    // 저장되는 results는 원본이 아니라 규칙 적용본(ruled).
+    const saved = mockedSave.mock.calls[0][0];
+    expect(saved.results).toBe(ruledResults);
+  });
+
+  it("Run 시 내역 카운트는 규칙 적용본(ruled) 기준으로 집계한다", async () => {
+    mockedLoad.mockResolvedValue(playlistRes(2));
+    mockedParse.mockResolvedValue(parseRes(5));
+    // runMatch 원본: needs_review 2건.
+    mockedRun.mockResolvedValue([
+      { id: "mr_1", youtubeTrackId: "yt_1", status: "needs_review", confidence: "medium", score: 0.6, candidates: [] },
+      { id: "mr_2", youtubeTrackId: "yt_2", status: "needs_review", confidence: "medium", score: 0.6, candidates: [] },
+    ] as unknown as Awaited<ReturnType<typeof runMatch>>);
+    // 규칙 적용 후: owned 1 / missing 1 / review 0.
+    mockedApplyDecisions.mockReturnValue([
+      { id: "mr_1", youtubeTrackId: "yt_1", status: "owned", confidence: "high", score: 1, candidates: [] },
+      { id: "mr_2", youtubeTrackId: "yt_2", status: "missing", confidence: "low", score: 0, candidates: [] },
+    ] as unknown as ReturnType<typeof applyManualDecisions>);
+
+    const { container } = render(<AnalysisFlow />);
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByPlaceholderText("YouTube playlist URL"),
+      "https://www.youtube.com/playlist?list=PL1",
+    );
+    await user.click(screen.getByRole("button", { name: "Load" }));
+    await screen.findByText("2곡 로드됨");
+
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["<xml/>"], "library.xml", { type: "text/xml" }),
+    );
+    await screen.findByText(/library\.xml/);
+
+    await user.click(screen.getByRole("button", { name: "Run Match" }));
+    await waitFor(() => expect(mockedAddSession).toHaveBeenCalledTimes(1));
+
+    const session = mockedAddSession.mock.calls[0][0];
+    expect(session.totalTrackCount).toBe(2);
+    expect(session.ownedCount).toBe(1); // 규칙 적용본 기준(원본은 review 2건)
+    expect(session.missingCount).toBe(1);
+    expect(session.reviewCount).toBe(0);
   });
 
   it("ErrorNotice의 '다시 시도'가 플레이리스트 로드를 재시도한다", async () => {

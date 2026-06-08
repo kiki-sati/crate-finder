@@ -11,11 +11,17 @@ vi.mock("@/services/analysis-handoff", () => ({
   readAnalysis: vi.fn(),
   saveAnalysis: vi.fn(),
 }));
+// 확정/거부 결정의 영속화는 서비스로 위임 — 호출 인자만 검증한다.
+vi.mock("@/services/manual-match-rules", () => ({
+  saveManualDecision: vi.fn(),
+}));
 import { readAnalysis, saveAnalysis } from "@/services/analysis-handoff";
+import { saveManualDecision } from "@/services/manual-match-rules";
 import ResultsPage from "@/app/results/page";
 
 const mockedRead = vi.mocked(readAnalysis);
 const mockedSave = vi.mocked(saveAnalysis);
+const mockedSaveDecision = vi.mocked(saveManualDecision);
 
 function result(
   id: string,
@@ -201,5 +207,76 @@ describe("ResultsPage", () => {
     expect(mockedSave).toHaveBeenCalledTimes(1);
     const saved = mockedSave.mock.calls[0][0] as AnalysisHandoff;
     expect(saved.results[0].status).toBe("missing");
+  });
+
+  it("확정 시 해당 videoId로 confirm 결정을 저장한다", async () => {
+    const rb: RekordboxTrack = {
+      id: "rb_1",
+      title: "Reviewed Track",
+      artist: "Artist",
+      normalizedTitle: "reviewed track",
+    };
+    // ytTrack(r.id) → videoId === "mr_1" (헬퍼 규약).
+    mockedRead.mockReturnValue(
+      handoff(
+        [
+          [
+            result("mr_1", "needs_review", {
+              confidence: "medium",
+              score: 0.6,
+              candidates: [
+                { rekordboxTrackId: "rb_1", score: 0.8, reason: "similar_title" },
+              ],
+            }),
+            "Reviewed Track",
+          ],
+        ],
+        [rb],
+      ),
+    );
+    render(<ResultsPage />);
+
+    await screen.findByTestId("result-summary");
+    await userEvent.click(screen.getByRole("button", { name: "확인" }));
+    await userEvent.click(screen.getByRole("button", { name: "이 곡으로 확정" }));
+
+    expect(mockedSaveDecision).toHaveBeenCalledTimes(1);
+    expect(mockedSaveDecision).toHaveBeenCalledWith("mr_1", {
+      kind: "confirm",
+      rekordboxTrackId: "rb_1",
+    });
+  });
+
+  it("거부 시 해당 videoId로 reject 결정을 저장한다", async () => {
+    const rb: RekordboxTrack = {
+      id: "rb_1",
+      title: "Reviewed Track",
+      normalizedTitle: "reviewed track",
+    };
+    mockedRead.mockReturnValue(
+      handoff(
+        [
+          [
+            result("mr_1", "needs_review", {
+              confidence: "medium",
+              score: 0.6,
+              candidates: [
+                { rekordboxTrackId: "rb_1", score: 0.8, reason: "similar_title" },
+              ],
+            }),
+            "Reviewed Track",
+          ],
+        ],
+        [rb],
+      ),
+    );
+    render(<ResultsPage />);
+
+    await screen.findByTestId("result-summary");
+    await userEvent.click(screen.getByRole("button", { name: "확인" }));
+    await userEvent.click(screen.getByRole("button", { name: "미보유로 표시" }));
+
+    expect(mockedSaveDecision).toHaveBeenCalledTimes(1);
+    expect(mockedSaveDecision).toHaveBeenCalledWith("mr_1", { kind: "reject" });
   });
 });

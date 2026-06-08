@@ -14,7 +14,8 @@ import {
   saveAnalysis,
   type AnalysisHandoff,
 } from "@/services/analysis-handoff";
-import { resolveMatch } from "@/lib/matcher/resolve";
+import { saveManualDecision } from "@/services/manual-match-rules";
+import { resolveMatch, type ResolveDecision } from "@/lib/matcher/resolve";
 import type { MatchRow } from "@/components/results/match-row";
 
 function summarize(rows: MatchRow[]) {
@@ -45,8 +46,26 @@ export default function ResultsPage() {
     [analysis],
   );
 
+  // resultId → 해당 YouTube 트랙의 videoId(현재 analysis 클로저 기준).
+  // 결정 영속화는 videoId(전역 고유) 기준이므로 매칭 변환 전에 미리 조회한다.
+  function videoIdFor(resultId: string): string | undefined {
+    if (!analysis) return undefined;
+    const result = analysis.results.find((r) => r.id === resultId);
+    if (!result) return undefined;
+    return analysis.youtubeTracks.find((t) => t.id === result.youtubeTrackId)
+      ?.videoId;
+  }
+
+  // 결정을 같은 곡 재분석 시 자동 재적용하도록 영속화한다.
+  // side-effect는 setAnalysis updater(StrictMode 이중호출) 밖에서 1회만 호출.
+  function persistDecision(resultId: string, decision: ResolveDecision) {
+    const videoId = videoIdFor(resultId);
+    if (videoId) saveManualDecision(videoId, decision);
+  }
+
   // 후보 확정: 매칭 변환(resolveMatch)은 페이지에서 호출(계층 규칙) 후 저장.
   function handleConfirm(resultId: string, rekordboxTrackId: string) {
+    persistDecision(resultId, { kind: "confirm", rekordboxTrackId });
     setAnalysis((prev) => {
       if (!prev) return prev;
       const results = prev.results.map((r) =>
@@ -62,6 +81,7 @@ export default function ResultsPage() {
 
   // 후보 거부: 누락으로 표시.
   function handleReject(resultId: string) {
+    persistDecision(resultId, { kind: "reject" });
     setAnalysis((prev) => {
       if (!prev) return prev;
       const results = prev.results.map((r) =>
