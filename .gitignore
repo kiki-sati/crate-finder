@@ -11,6 +11,10 @@ tsconfig.tsbuildinfo
 .env*
 !.env.example
 
+# 사용자 Rekordbox 라이브러리 내보내기(개인 데이터 — 저장/커밋 금지, ADR-004)
+# 루트에 떨어뜨린 *.xml만 무시한다(테스트 픽스처는 src/ 하위라 영향 없음).
+/*.xml
+
 # vercel
 .vercel
 
