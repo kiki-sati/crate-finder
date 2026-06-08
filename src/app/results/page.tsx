@@ -118,7 +118,7 @@ export default function ResultsPage() {
             data-testid="result-summary"
             className="text-xs text-[color:var(--color-text-secondary)]"
           >
-            전체 {summary.total} · 보유 {summary.owned} · 누락 {summary.missing} ·
+            전체 {summary.total} · 보유 {summary.owned} · 미보유 {summary.missing} ·
             확인필요 {summary.needs_review}
           </p>
           <ResultFilters value={filter} onChange={setFilter} />

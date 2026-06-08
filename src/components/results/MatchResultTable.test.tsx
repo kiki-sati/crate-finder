@@ -198,7 +198,7 @@ describe("MatchResultTable", () => {
       />,
     );
     await userEvent.click(screen.getByRole("button", { name: "확인" }));
-    await userEvent.click(screen.getByRole("button", { name: "누락으로 표시" }));
+    await userEvent.click(screen.getByRole("button", { name: "미보유로 표시" }));
     expect(onReject).toHaveBeenCalledWith("mr_nr");
   });
 });

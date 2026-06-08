@@ -1,9 +1,9 @@
 import type { TrackStatus } from "@/types/track";
 
 const MAP: Record<TrackStatus, { label: string; cls: string }> = {
-  owned: { label: "Owned", cls: "text-owned bg-owned-bg owned" },
-  missing: { label: "Missing", cls: "text-missing bg-missing-bg missing" },
-  needs_review: { label: "Needs Review", cls: "text-review bg-review-bg review" },
+  owned: { label: "보유", cls: "text-owned bg-owned-bg owned" },
+  missing: { label: "미보유", cls: "text-missing bg-missing-bg missing" },
+  needs_review: { label: "확인필요", cls: "text-review bg-review-bg review" },
 };
 
 export function StatusBadge({ status }: { status: TrackStatus }) {

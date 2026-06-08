@@ -58,7 +58,7 @@ describe("HistoryPage", () => {
     mockedList.mockReturnValue([session("s1")]);
     render(<HistoryPage />);
     expect(await screen.findByText(/https:\/\/yt\/s1/)).toBeInTheDocument();
-    expect(screen.getByText(/누락 3/)).toBeInTheDocument();
+    expect(screen.getByText(/미보유 3/)).toBeInTheDocument();
   });
 
   it("삭제 확인 시 deleteSession 호출 후 목록에서 사라진다", async () => {

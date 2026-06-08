@@ -6,13 +6,13 @@ import { ConfidenceBadge } from "@/components/results/ConfidenceBadge";
 describe("StatusBadge", () => {
   it("owned 라벨과 색 클래스를 렌더한다", () => {
     render(<StatusBadge status="owned" />);
-    const el = screen.getByText("Owned");
+    const el = screen.getByText("보유");
     expect(el).toBeInTheDocument();
     expect(el.className).toMatch(/owned/);
   });
-  it("needs_review는 'Needs Review'로 표시한다", () => {
+  it("needs_review는 '확인필요'로 표시한다", () => {
     render(<StatusBadge status="needs_review" />);
-    expect(screen.getByText("Needs Review")).toBeInTheDocument();
+    expect(screen.getByText("확인필요")).toBeInTheDocument();
   });
 });
 

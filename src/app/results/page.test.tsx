@@ -95,7 +95,7 @@ describe("ResultsPage", () => {
     const summary = await screen.findByTestId("result-summary");
     expect(summary).toHaveTextContent("전체 4");
     expect(summary).toHaveTextContent("보유 1");
-    expect(summary).toHaveTextContent("누락 2");
+    expect(summary).toHaveTextContent("미보유 2");
     expect(summary).toHaveTextContent("확인필요 1");
   });
 
@@ -108,7 +108,7 @@ describe("ResultsPage", () => {
     );
     render(<ResultsPage />);
     await screen.findByText("Owned Track");
-    await userEvent.click(screen.getByRole("button", { name: /^missing$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^미보유$/ }));
     expect(screen.getByText("Missing Track")).toBeInTheDocument();
     expect(screen.queryByText("Owned Track")).toBeNull();
   });
@@ -119,7 +119,7 @@ describe("ResultsPage", () => {
     );
     render(<ResultsPage />);
     await screen.findByText("Owned Track");
-    await userEvent.click(screen.getByRole("button", { name: /^missing$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^미보유$/ }));
     expect(screen.getByText(/no results/i)).toBeInTheDocument();
   });
 
@@ -194,9 +194,9 @@ describe("ResultsPage", () => {
 
     const summary = await screen.findByTestId("result-summary");
     await userEvent.click(screen.getByRole("button", { name: "확인" }));
-    await userEvent.click(screen.getByRole("button", { name: "누락으로 표시" }));
+    await userEvent.click(screen.getByRole("button", { name: "미보유로 표시" }));
 
-    expect(summary).toHaveTextContent("누락 1");
+    expect(summary).toHaveTextContent("미보유 1");
     expect(summary).toHaveTextContent("확인필요 0");
     expect(mockedSave).toHaveBeenCalledTimes(1);
     const saved = mockedSave.mock.calls[0][0] as AnalysisHandoff;
